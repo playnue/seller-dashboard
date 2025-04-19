@@ -1,5 +1,5 @@
-// pages/dashboard.js
 "use client"
+export const dynamic = 'force-dynamic';
 import { useState } from 'react';
 import { Home, DollarSign, MapPin, Zap, Users, BarChart2, Tag, LogOut } from 'lucide-react';
 import { nhost } from '@/lib/nhost';
