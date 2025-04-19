@@ -1,4 +1,5 @@
 // components/EnhancedBookingsList.jsx
+"use client"
 import { useState, useEffect } from "react";
 import { Calendar, Clock, Users, CreditCard, ChevronRight, ArrowRight } from "lucide-react";
 import { useAccessToken } from "@nhost/nextjs";
