@@ -1,8 +1,15 @@
 import { NhostClient } from "@nhost/nextjs";
 
+const subdomain = process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN;
+const region = process.env.NEXT_PUBLIC_NHOST_REGION;
+
+if (!subdomain || !region) {
+  throw new Error("Missing Nhost configuration: subdomain or region is not set.");
+}
+
 export const nhost = new NhostClient({
-  subdomain: process.env.NEXT_PUBLIC_NHOST_SUBDOMAIN,
-  region: process.env.NEXT_PUBLIC_NHOST_REGION,
-  autoRefreshToken:true,
-  autoSignIn:true,
-})
+  subdomain,
+  region,
+  autoRefreshToken: true,
+  autoSignIn: true,
+});
