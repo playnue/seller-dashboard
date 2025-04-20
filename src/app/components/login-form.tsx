@@ -22,16 +22,16 @@ import React, { Suspense } from "react";
 const getValidRedirectUrl = (returnUrl: string | null) => {
   // If no returnUrl is provided, return null to let Nhost use its default redirect
   if (!returnUrl) return null;
-  
+
   try {
     // Decode the URL if it's encoded
     const decodedUrl = decodeURIComponent(returnUrl);
-    
+
     // Only use the pathname without any query parameters
     const url = new URL(decodedUrl, window.location.origin);
     return url.pathname;
   } catch (error) {
-    console.error('Error processing redirect URL:', error);
+    console.error("Error processing redirect URL:", error);
     return null;
   }
 };
@@ -39,23 +39,20 @@ const getValidRedirectUrl = (returnUrl: string | null) => {
 export const useAuth = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const handleGoogleLogin = async () => {
     try {
-      const returnUrl = searchParams.get("returnUrl");
-      const redirectPath = getValidRedirectUrl(returnUrl);
-      const redirectTo =
-        redirectPath && process.env.NEXT_PUBLIC_DOMAIN
-          ? `${process.env.NEXT_PUBLIC_DOMAIN}${redirectPath}`
-          : process.env.NEXT_PUBLIC_DOMAIN;
-  
+      // const returnUrl = searchParams.get("returnUrl");
+      // const redirectPath = getValidRedirectUrl(returnUrl);
+      const redirectTo = process.env.NEXT_PUBLIC_DOMAIN
+
       const result = await nhost.auth.signIn({
-        provider: 'google',
+        provider: "google",
         options: {
-          redirectTo: redirectTo
-        }
+          redirectTo: redirectTo,
+        },
       });
-  
+
       if (result?.error) {
         console.error("Google login error:", result.error);
         toast.error("Google login failed: " + result.error.message, {
@@ -71,21 +68,20 @@ export const useAuth = () => {
       });
     }
   };
-  
 
   const handleSuccessfulLogin = () => {
     const returnUrl = searchParams.get("returnUrl");
     if (returnUrl) {
       const decodedUrl = decodeURIComponent(returnUrl);
-      router.push(decodedUrl.startsWith('/') ? decodedUrl : `/${decodedUrl}`);
+      router.push(decodedUrl.startsWith("/") ? decodedUrl : `/${decodedUrl}`);
     } else {
-      router.push('/');
+      router.push("/");
     }
   };
 
   return {
     handleGoogleLogin,
-    handleSuccessfulLogin
+    handleSuccessfulLogin,
   };
 };
 
@@ -100,7 +96,7 @@ function LoginFormContent() {
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const returnUrl = searchParams.get("returnUrl");
-      console.log(returnUrl)
+      console.log(returnUrl);
       if (returnUrl) {
         router.push(decodeURIComponent(returnUrl));
       } else {
@@ -112,41 +108,43 @@ function LoginFormContent() {
   const handleRedirectAfterLogin = () => {
     const returnUrl = searchParams.get("returnUrl");
     const origin = window.location.origin;
-    
+
     if (returnUrl) {
       // Decode the URL and ensure it starts with a forward slash
       const decodedUrl = decodeURIComponent(returnUrl);
-      const validUrl = decodedUrl.startsWith('/') ? decodedUrl : `/${decodedUrl}`;
-      console.log(validUrl)
+      const validUrl = decodedUrl.startsWith("/")
+        ? decodedUrl
+        : `/${decodedUrl}`;
+      console.log(validUrl);
       // Construct full URL with origin
       const fullUrl = `${origin}${validUrl}`;
-      
+
       // Validate that the URL belongs to your domain
       if (fullUrl.startsWith(origin)) {
         window.location.href = validUrl;
       } else {
-        window.location.href = '/';
+        window.location.href = "/";
       }
     } else {
-      window.location.href = '/';
+      window.location.href = "/";
     }
   };
-  
+
   // Update Google login handler to preserve returnUrl
   // const handleGoogleLogin = async () => {
   //   try {
   //     const returnUrl = searchParams.get("returnUrl");
-      
+
   //     const result = await nhost.auth.signIn({
   //       provider: 'google',
   //       options: {
   //         // Pass the returnUrl as state parameter
-  //         redirectTo: returnUrl ? 
-  //           `${window.location.origin}${decodeURIComponent(returnUrl)}` : 
+  //         redirectTo: returnUrl ?
+  //           `${window.location.origin}${decodeURIComponent(returnUrl)}` :
   //           window.location.origin
   //       }
   //     });
-  
+
   //     if (result?.error) {
   //       toast.error("Google login failed", {
   //         position: "top-right",
@@ -193,7 +191,6 @@ function LoginFormContent() {
       });
     }
   };
-
 
   return (
     <>
