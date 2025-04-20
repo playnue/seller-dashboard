@@ -42,17 +42,17 @@ export const useAuth = () => {
 
   const handleGoogleLogin = async () => {
     try {
-      // const returnUrl = searchParams.get("returnUrl");
-      // const redirectPath = getValidRedirectUrl(returnUrl);
-      const redirectTo = process.env.NEXT_PUBLIC_DOMAIN
-
+      const options: any = {
+        redirectTo: process.env.NEXT_PUBLIC_DOMAIN, // Just the domain root
+      };
+  
+      console.log("Redirecting to:", options.redirectTo);
+  
       const result = await nhost.auth.signIn({
         provider: "google",
-        options: {
-          redirectTo: redirectTo,
-        },
+        options,
       });
-
+  
       if (result?.error) {
         console.error("Google login error:", result.error);
         toast.error("Google login failed: " + result.error.message, {
@@ -68,6 +68,7 @@ export const useAuth = () => {
       });
     }
   };
+  
 
   const handleSuccessfulLogin = () => {
     const returnUrl = searchParams.get("returnUrl");
