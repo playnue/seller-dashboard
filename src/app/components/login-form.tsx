@@ -82,7 +82,7 @@ export const useAuth = () => {
       const decodedUrl = decodeURIComponent(returnUrl);
       router.push(decodedUrl.startsWith('/') ? decodedUrl : `/${decodedUrl}`);
     } else {
-      router.push('/dashboard');
+      router.push('/');
     }
   };
 
@@ -107,7 +107,7 @@ function LoginFormContent() {
       if (returnUrl) {
         router.push(decodeURIComponent(returnUrl));
       } else {
-        router.push("/dashboard");
+        router.push("/");
       }
     }
   }, [isAuthenticated, isLoading, searchParams, router]);
@@ -128,10 +128,10 @@ function LoginFormContent() {
       if (fullUrl.startsWith(origin)) {
         window.location.href = validUrl;
       } else {
-        window.location.href = '/dashboard';
+        window.location.href = '/';
       }
     } else {
-      window.location.href = '/dashboard';
+      window.location.href = '/';
     }
   };
   
