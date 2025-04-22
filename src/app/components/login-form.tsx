@@ -57,7 +57,7 @@ export const useAuth = () => {
 
       const result = await nhost.auth.signIn({
         provider: "google",
-        options
+        // options
       });
 
       if (result?.error) {
