@@ -43,21 +43,24 @@ export const useAuth = () => {
   const handleGoogleLogin = async () => {
     try {
       const returnUrl = searchParams.get("returnUrl");
-      const options: any = {};
+      const options={
+        "redirectTo": process.env.NEXT_PUBLIC_DOMAIN
+      }
       const redirectPath = getValidRedirectUrl(returnUrl);
       // console.log(returnUrl)
       // console.log(redirectPath)
-      if (redirectPath) {
-        // Only set redirectTo if we have a valid path
-        options.redirectTo = process.env.NEXT_PUBLIC_DOMAIN;
-      }
+      // if (redirectPath) {
+      //   // Only set redirectTo if we have a valid path
+      //   options.redirectTo = process.env.NEXT_PUBLIC_DOMAIN;
+      
+      // }
       console.log(options);
 
       // process.env.url + "/" + returnUrl
 
       const result = await nhost.auth.signIn({
         provider: "google",
-        // options
+        options
       });
 
       if (result?.error) {
