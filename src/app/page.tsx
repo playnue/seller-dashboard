@@ -9,13 +9,21 @@ import VenueDetails from "./components/VenueDetails";
 import SellerOfflineBooking from "./components/SellerOfflineBooking ";
 import Header from "./components/Header";
 import { useVenue } from "./context/VenueContext";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
+  const router = useRouter();
   const userData = useUserData();
   const { selectedVenue, venues, isLoading } = useVenue(); // Assuming venues array is available
   const [activeTab, setActiveTab] = useState("overview");
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(false);
+
+   useEffect(() => {
+    if (userData === null) {
+      router.push("/login");
+    }
+  }, [userData, router]);
 
   // Show loading until venue is selected
   if (isLoading || !selectedVenue) {
