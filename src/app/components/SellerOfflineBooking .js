@@ -6,84 +6,108 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Clock } from "lucide-react";
 
-const SellerOfflineBooking = () => {
+const SellerOfflineBooking = ({ venueId }) => {
   const [venues, setVenues] = useState([]);
-  const [selectedVenue, setSelectedVenue] = useState(null);
+  const [selectedVenue, setSelectedVenue] = useState(venueId || null);
   const [selectedCourt, setSelectedCourt] = useState(null);
   const [courts, setCourts] = useState([]);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const accessToken = useAccessToken();
-  const user = useUserData()
-  const userId=user.id // To store the seller's user ID
+  const user = useUserData();
+  const userId = user?.id;
+
+  // Early return if essential data is missing
+  if (!userId || !accessToken) {
+    return (
+      <div className="flex justify-center items-center p-8">
+        <div className="text-center">
+          <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-teal-500 border-r-transparent"></div>
+          <p className="mt-2 text-gray-600">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
 
   const formatDate = (date) => {
     if (!date) return "";
-    // Create a new date object and adjust for timezone
     const d = new Date(date);
-    // Get year, month, and day components
     const year = d.getFullYear();
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    // Return in YYYY-MM-DD format
     return `${year}-${month}-${day}`;
   };
 
   const handleDateSelect = (date) => {
-    // Create a new date at midnight in local timezone
     const localDate = new Date(date.setHours(0, 0, 0, 0));
     setSelectedDate(localDate);
   };
 
-  // Fetch user ID (assuming it's available from auth context or similar)
-  
+  // Fetch all venues for this seller
+  // In SellerOfflineBooking component, modify the fetchVenues function:
+const fetchVenues = async () => {
+  if (!userId) {
+    console.warn("fetchVenues called without userId");
+    return;
+  }
 
-  // Fetch all venues first
-  const fetchVenues = async () => {
-    try {
-      const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `
-            query GetVenues {
-              venues {
-                id
-                title
-                user_id
-              }
+  try {
+    setLoading(true); // Make sure you have a loading state
+    const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: `
+          query GetVenues($userId: uuid!) {
+            venues(where: { user_id: { _eq: $userId } }) {
+              id
+              title
+              user_id
             }
-          `
-        }),
-      });
+          }
+        `,
+        variables: {
+          userId, // Make sure userId is valid here
+        },
+      }),
+    });
 
-      const data = await response.json();
-      if (data.errors) throw new Error("Failed to fetch venues");
-      
-      // Filter venues to only include those owned by the current user
-      const sellerVenues = data.data.venues.filter(venue => venue.user_id === userId);
-      setVenues(sellerVenues);
-      
-      // Select first venue by default if any exist
-      if (sellerVenues.length > 0) {
-        setSelectedVenue(sellerVenues[0].id);
-        fetchCourts(sellerVenues[0].id);
-      }
-      
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching venues:", error);
-      setLoading(false);
+    const data = await response.json();
+    if (data.errors) {
+      console.error("GraphQL errors:", data.errors);
+      throw new Error("Failed to fetch venues");
     }
-  };
+    
+    const sellerVenues = data.data.venues;
+    setVenues(sellerVenues);
+    
+    // Only proceed if we have venues and a valid venueId prop
+    if (venueId && sellerVenues.find(v => v.id === venueId)) {
+      setSelectedVenue(venueId);
+      await fetchCourts(venueId);
+    } else if (sellerVenues.length > 0) {
+      setSelectedVenue(sellerVenues[0].id);
+      await fetchCourts(sellerVenues[0].id);
+    }
+    
+    setLoading(false);
+  } catch (error) {
+    console.error("Error fetching venues:", error);
+    setLoading(false);
+  }
+};
 
-  // Fetch courts for selected venue
-  const fetchCourts = async (venueId) => {
-    if (!venueId) return;
+  // Fetch courts for selected venue - only call if venueId is valid
+  const fetchCourts = async (targetVenueId) => {
+    if (!targetVenueId) {
+      console.warn("fetchCourts called without venueId");
+      setCourts([]);
+      return;
+    }
     
     try {
       const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
@@ -102,27 +126,37 @@ const SellerOfflineBooking = () => {
             }
           `,
           variables: {
-            venueId,
+            venueId: targetVenueId,
           },
         }),
       });
 
       const data = await response.json();
-      if (data.errors) throw new Error("Failed to fetch courts");
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        throw new Error("Failed to fetch courts");
+      }
+      
       setCourts(data.data.courts);
       
-      // Select first court by default if any exist
       if (data.data.courts.length > 0) {
         setSelectedCourt(data.data.courts[0].id);
+      } else {
+        setSelectedCourt(null);
       }
     } catch (error) {
       console.error("Error fetching courts:", error);
+      setCourts([]);
     }
   };
 
-  // Fetch slots for selected court and date
+  // Fetch slots for selected court and date - only call if both are valid
   const fetchSlots = async (courtId, date) => {
-    if (!courtId || !date) return;
+    if (!courtId || !date) {
+      console.warn("fetchSlots called without required parameters", { courtId, date });
+      setSlots([]);
+      return;
+    }
 
     try {
       const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
@@ -152,16 +186,18 @@ const SellerOfflineBooking = () => {
       });
 
       const data = await response.json();
-      if (data.errors) throw new Error("Failed to fetch slots");
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        throw new Error("Failed to fetch slots");
+      }
       
-      // Set slots separately instead of nesting in courts array
       setSlots(data.data.slots);
     } catch (error) {
       console.error("Error fetching slots:", error);
+      setSlots([]);
     }
   };
 
-  // Handle booking toggle
   const handleBookingToggle = async (slot) => {
     try {
       const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
@@ -193,13 +229,14 @@ const SellerOfflineBooking = () => {
       if (data.errors) throw new Error("Failed to update booking status");
 
       // Refresh slots after update
-      fetchSlots(selectedCourt, selectedDate);
+      if (selectedCourt && selectedDate) {
+        fetchSlots(selectedCourt, selectedDate);
+      }
     } catch (error) {
       console.error("Error updating booking status:", error);
     }
   };
 
-  // Format time range for display
   const formatTimeRange = (startTime, endTime) => {
     const formatTime = (time) => {
       const [hours, minutes] = time.split(":");
@@ -214,27 +251,37 @@ const SellerOfflineBooking = () => {
     return `${formatTime(startTime)} - ${formatTime(endTime)}`;
   };
 
-  // Handle venue change
-  const handleVenueChange = (venueId) => {
-    setSelectedVenue(venueId);
-    fetchCourts(venueId);
-    setSelectedCourt(null); // Reset selected court
-    setSlots([]); // Clear slots when venue changes
+  const handleVenueChange = (newVenueId) => {
+    setSelectedVenue(newVenueId);
+    setSelectedCourt(null);
+    setSlots([]);
+    if (newVenueId) {
+      fetchCourts(newVenueId);
+    }
   };
 
-  // Handle court change
   const handleCourtChange = (courtId) => {
     setSelectedCourt(courtId);
-    fetchSlots(courtId, selectedDate);
+    setSlots([]);
+    if (courtId && selectedDate) {
+      fetchSlots(courtId, selectedDate);
+    }
   };
 
- 
-
+  // Update useEffect to handle prop changes
   useEffect(() => {
-    if (userId) {
+    if (userId && accessToken) {
       fetchVenues();
     }
-  }, [userId]);
+  }, [userId, accessToken]);
+
+  // Handle venueId prop changes
+  useEffect(() => {
+    if (venueId && venueId !== selectedVenue) {
+      setSelectedVenue(venueId);
+      fetchCourts(venueId);
+    }
+  }, [venueId]);
 
   useEffect(() => {
     if (selectedCourt && selectedDate) {
@@ -242,13 +289,16 @@ const SellerOfflineBooking = () => {
     }
   }, [selectedCourt, selectedDate]);
 
-  if (loading) return <div className="flex justify-center p-4">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex justify-center p-4">
+        <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-teal-500 border-r-transparent"></div>
+      </div>
+    );
+  }
 
-  // Get current venue name
   const currentVenue = venues.find(venue => venue.id === selectedVenue);
   const currentVenueName = currentVenue ? currentVenue.title : "";
-
-  // Get current court name
   const currentCourt = courts.find(court => court.id === selectedCourt);
   const currentCourtName = currentCourt ? currentCourt.name : "";
 
@@ -323,7 +373,6 @@ const SellerOfflineBooking = () => {
                 />
               </div>
 
-              {/* Slots Display */}
               <div>
                 <h3 className="text-md font-medium mb-2">
                   Available Slots for {currentCourtName}

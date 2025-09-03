@@ -7,6 +7,7 @@ import "./globals.css";
 import logo from "../../public/logo.png";
 import Head from "next/head";
 import { NhostProvider } from "@nhost/nextjs";
+import { VenueProvider } from './context/VenueContext';
 import { nhost } from "../lib/nhost"
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -37,8 +38,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <NhostProvider nhost={nhost}>
-          {children}
+       <NhostProvider nhost={nhost}>
+          <VenueProvider>
+            {children}
+          </VenueProvider>
         </NhostProvider>
       </body>
     </html>

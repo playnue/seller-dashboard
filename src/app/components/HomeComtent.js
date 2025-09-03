@@ -19,9 +19,11 @@ import {
 } from "recharts";
 import { useAccessToken, useUserData } from "@nhost/nextjs";
 import RecentBookingsCard from "./RecentBookingsCard"
+import { useRouter } from "next/navigation";
 
-export default function HomeContent() {
+export default function HomeContent({venueId}) {
   const user = useUserData();
+  const router = useRouter()
   const accessToken = useAccessToken();
   const [bookings, setTurfBookings] = useState([]);
   const [customerDetails, setCustomerDetails] = useState({});
@@ -72,107 +74,108 @@ export default function HomeContent() {
     
     setSportDistribution(distributionWithColors);
   };
-  const fetchTurfBookings = async (userId) => {
-    try {
-      const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-          "X-Hasura-Role": "seller",
-        },
-        body: JSON.stringify({
-          query: `
-                query GetSellerBookings($userId: uuid!) {
-                  venues(where: { user_id: { _eq: $userId } }) {
+  
+  const fetchTurfBookings = async (venueId) => {
+  try {
+    const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+        "X-Hasura-Role": "seller",
+      },
+      body: JSON.stringify({
+        query: `
+          query GetSellerBookings($venueId: uuid!) {
+            venues(where: { id: { _eq: $venueId } }) {
+              id
+              title
+              sports
+              courts {
+                id
+                name
+                slots {
+                  id
+                  date
+                  start_at
+                  end_at
+                  price
+                  bookings {
                     id
-                    title
-                    sports
-                    courts {
+                    created_at
+                    payment_type
+                    user_id
+                    user {
                       id
-                      name
-                      slots {
-                        id
-                        date
-                        start_at
-                        end_at
-                        price
-                        bookings {
-                          id
-                          created_at
-                          payment_type
-                          user_id
-                          user {
-                            id
-                            displayName
-                            email
-                          }
-                        }
-                      }
+                      displayName
+                      email
                     }
                   }
                 }
-              `,
-          variables: { userId },
-        }),
-      });
+              }
+            }
+          }
+        `,
+        variables: { venueId },
+      }),
+    });
 
-      const { data, errors } = await response.json();
+    const { data, errors } = await response.json();
 
-      if (errors) {
-        console.error("GraphQL errors:", errors);
-        return;
-      }
-
-      // Flatten the nested structure
-      const allBookings =
-        data?.venues.flatMap((venue) =>
-          venue.courts.flatMap((court) =>
-            court.slots.flatMap((slot) =>
-              slot.bookings.map((booking) => ({
-                ...booking,
-                venue_name: venue.title,
-                court_name: court.name,
-                slot: {
-                  date: slot.date,
-                  start_at: slot.start_at,
-                  end_at: slot.end_at,
-                  price: slot.price,
-                },
-              }))
-            )
-          )
-        ) || [];
-        calculateSportsDistribution(data?.venues || []);
-
-
-      // Sort bookings by date and time
-      const sortedBookings = allBookings.sort((a, b) => {
-        const dateA = new Date(`${a.slot.date} ${a.slot.start_at}`);
-        const dateB = new Date(`${b.slot.date} ${b.slot.start_at}`);
-        return dateB - dateA;
-      });
-
-      setTurfBookings(sortedBookings);
-      
-      // Calculate today's bookings
-      calculateTodayBookings(sortedBookings);
-      
-      // Calculate weekly revenue
-      calculateWeeklyRevenue(sortedBookings);
-      
-      // Calculate utilization rate
-      calculateUtilizationRate(data?.venues || [], sortedBookings);
-      
-      // Calculate popular time slots for the bar chart
-      calculatePopularTimeSlots(sortedBookings);
-      
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setIsLoading(false);
+    if (errors) {
+      console.error("GraphQL errors:", errors);
+      return;
     }
-  };
+
+    // Rest of your code remains the same...
+    const allBookings =
+      data?.venues.flatMap((venue) =>
+        venue.courts.flatMap((court) =>
+          court.slots.flatMap((slot) =>
+            slot.bookings.map((booking) => ({
+              ...booking,
+              venue_name: venue.title,
+              court_name: court.name,
+              slot: {
+                date: slot.date,
+                start_at: slot.start_at,
+                end_at: slot.end_at,
+                price: slot.price,
+              },
+            }))
+          )
+        )
+      ) || [];
+    
+    calculateSportsDistribution(data?.venues || []);
+
+    // Sort bookings by date and time
+    const sortedBookings = allBookings.sort((a, b) => {
+      const dateA = new Date(`${a.slot.date} ${a.slot.start_at}`);
+      const dateB = new Date(`${b.slot.date} ${b.slot.start_at}`);
+      return dateB - dateA;
+    });
+
+    setTurfBookings(sortedBookings);
+    
+    // Calculate today's bookings
+    calculateTodayBookings(sortedBookings);
+    
+    // Calculate weekly revenue
+    calculateWeeklyRevenue(sortedBookings);
+    
+    // Calculate utilization rate
+    calculateUtilizationRate(data?.venues || [], sortedBookings);
+    
+    // Calculate popular time slots for the bar chart
+    calculatePopularTimeSlots(sortedBookings);
+    
+  } catch (error) {
+    console.error("Error fetching bookings:", error);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const calculateTodayBookings = (bookings) => {
     console.log("--- Today's Bookings Calculation Start ---");
@@ -524,8 +527,20 @@ export default function HomeContent() {
   };
 
   useEffect(() => {
+    // Wait a bit for the auth state to settle
+    const timer = setTimeout(() => {
+      if (!user) {
+        router.push('/login'); // Make sure this matches your exact route
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [user, router]);
+
+
+  useEffect(() => {
     if (user?.id) {
-      fetchTurfBookings(user.id);
+      fetchTurfBookings(venueId);
     }
   }, [user?.id]);
 
@@ -638,3 +653,5 @@ export default function HomeContent() {
     </div>
   );
 }
+
+

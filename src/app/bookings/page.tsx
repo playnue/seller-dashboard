@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Sidebar from "../components/sidebar";
 import { useUserData, useAccessToken } from "@nhost/nextjs";
 import EnhancedBookingsList from "../components/EnhancedBookingsList";
+import Header from "../components/Header";
 
 export default function Dashboard() {
   const user = useUserData();
@@ -18,14 +19,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       <div className="flex-1 overflow-auto">
-        <div className="bg-white p-6 shadow">
-          <h1 className="text-2xl font-bold text-teal-800">
-            Hello {user?.displayName}
-          </h1>
-          <div className="text-sm text-gray-500">
-            Welcome back! Here's what's happening with your venues today.
-          </div>
-        </div>
+        <Header/>
 
         {/* Dashboard Content /}
         <div className="p-6">

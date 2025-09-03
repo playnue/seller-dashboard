@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-// import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -20,14 +19,10 @@ import { useAuthenticationStatus } from "@nhost/nextjs";
 import React, { Suspense } from "react";
 
 const getValidRedirectUrl = (returnUrl: string | null) => {
-  // If no returnUrl is provided, return null to let Nhost use its default redirect
   if (!returnUrl) return null;
 
   try {
-    // Decode the URL if it's encoded
     const decodedUrl = decodeURIComponent(returnUrl);
-
-    // Only use the pathname without any query parameters
     const url = new URL(decodedUrl, window.location.origin);
     return url.pathname;
   } catch (error) {
@@ -43,20 +38,11 @@ export const useAuth = () => {
   const handleGoogleLogin = async () => {
     try {
       const returnUrl = searchParams.get("returnUrl");
-      const options={
+      const options = {
         "redirectTo": process.env.NEXT_PUBLIC_DOMAIN
       }
       const redirectPath = getValidRedirectUrl(returnUrl);
-      // console.log(returnUrl)
-      // console.log(redirectPath)
-      // if (redirectPath) {
-      //   // Only set redirectTo if we have a valid path
-      //   options.redirectTo = process.env.NEXT_PUBLIC_DOMAIN;
-      
-      // }
       console.log(options);
-
-      // process.env.url + "/" + returnUrl
 
       const result = await nhost.auth.signIn({
         provider: "google",
@@ -103,6 +89,7 @@ function LoginFormContent() {
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuthenticationStatus();
   const { handleGoogleLogin } = useAuth();
+
   useEffect(() => {
     if (!isLoading && isAuthenticated) {
       const returnUrl = searchParams.get("returnUrl");
@@ -120,16 +107,13 @@ function LoginFormContent() {
     const origin = window.location.origin;
 
     if (returnUrl) {
-      // Decode the URL and ensure it starts with a forward slash
       const decodedUrl = decodeURIComponent(returnUrl);
       const validUrl = decodedUrl.startsWith("/")
         ? decodedUrl
         : `/${decodedUrl}`;
       console.log(validUrl);
-      // Construct full URL with origin
       const fullUrl = `${origin}${validUrl}`;
 
-      // Validate that the URL belongs to your domain
       if (fullUrl.startsWith(origin)) {
         window.location.href = validUrl;
       } else {
@@ -139,35 +123,6 @@ function LoginFormContent() {
       window.location.href = "/";
     }
   };
-
-  // Update Google login handler to preserve returnUrl
-  // const handleGoogleLogin = async () => {
-  //   try {
-  //     const returnUrl = searchParams.get("returnUrl");
-
-  //     const result = await nhost.auth.signIn({
-  //       provider: 'google',
-  //       options: {
-  //         // Pass the returnUrl as state parameter
-  //         redirectTo: returnUrl ?
-  //           `${window.location.origin}${decodeURIComponent(returnUrl)}` :
-  //           window.location.origin
-  //       }
-  //     });
-
-  //     if (result?.error) {
-  //       toast.error("Google login failed", {
-  //         position: "top-right",
-  //         autoClose: 3000,
-  //       });
-  //     }
-  //   } catch (error) {
-  //     toast.error("An error occurred during Google login", {
-  //       position: "top-right",
-  //       autoClose: 3000,
-  //     });
-  //   }
-  // };
 
   const handleCredentialsLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,83 +158,154 @@ function LoginFormContent() {
   };
 
   return (
-    <>
+    <div className="h-screen w-screen fixed inset-0 overflow-hidden">
       <ToastContainer />
-      <Card className="mx-auto max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
-          <CardDescription>
-            Enter your email below to login to your account
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-4">
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleLogin}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path
-                  d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                  fill="currentColor"
-                />
+      
+      {/* Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        {/* Animated shapes */}
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-gradient-to-r from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-r from-indigo-400/20 to-cyan-600/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:100px_100px]"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 h-full flex items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          {/* Logo/Brand Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-2xl">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
-              Login with Google
-            </Button>
-          </div>
-          <form onSubmit={handleCredentialsLogin}>
-            <div className="grid gap-4">
-              {error && <div className="text-red-500 text-sm">{error}</div>}
-              <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="grid gap-2">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <Link
-                    href="#"
-                    className="ml-auto inline-block text-sm underline"
-                  >
-                    Forgot your password?
-                  </Link>
-                </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full">
-                Login
-              </Button>
             </div>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="underline">
-              Sign up
-            </Link>
+            <h1 className="text-3xl font-bold text-white mb-2">Seller Portal</h1>
+            <p className="text-gray-300">Grow your business with us</p>
           </div>
-        </CardContent>
-      </Card>
-    </>
+
+          {/* Login Card */}
+          <Card className="backdrop-blur-xl bg-white/10 border-white/20 shadow-2xl">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl font-bold text-white">Welcome Back</CardTitle>
+              <CardDescription className="text-gray-300">
+                Sign in to access your seller dashboard
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5 pt-4">
+              {/* Google Login Button */}
+              <Button
+                variant="outline"
+                className="w-full h-12 font-semibold bg-white hover:bg-gray-100 text-gray-900 border-0 shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105"
+                onClick={handleGoogleLogin}
+              >
+                <svg className="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                  <path
+                    d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
+                    fill="currentColor"
+                  />
+                </svg>
+                Continue with Google
+              </Button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-white/20" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-transparent px-4 text-gray-400 font-medium">Or continue with email</span>
+                </div>
+              </div>
+
+              {/* Email/Password Form */}
+              <form onSubmit={handleCredentialsLogin} className="space-y-4">
+                {error && (
+                  <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-white font-medium">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="seller@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="h-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-400 focus:ring-blue-400/20"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="password" className="text-white font-medium">
+                      Password
+                    </Label>
+                    <Link
+                      href="#"
+                      className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="h-10 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-400 focus:ring-blue-400/20"
+                  />
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold shadow-lg transition-all duration-200 hover:shadow-xl hover:scale-105"
+                >
+                  Sign In to Dashboard
+                </Button>
+              </form>
+
+              {/* Sign Up Link */}
+              <div className="text-center pt-4 border-t border-white/20">
+                <p className="text-gray-300">
+                  New to our platform?{" "}
+                  <Link
+                    href="/signup"
+                    className="text-blue-400 hover:text-blue-300 font-semibold transition-colors"
+                  >
+                    Create seller account
+                  </Link>
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Footer */}
+          <div className="text-center mt-6 text-gray-400 text-sm">
+            <p>© 2025 Seller Portal. Empowering businesses worldwide.</p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function LoginForm() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <div className="h-screen w-screen fixed inset-0 flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+        <div className="text-white text-xl">Loading...</div>
+      </div>
+    }>
       <LoginFormContent />
     </Suspense>
   );

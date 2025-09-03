@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Clock, Users, CreditCard, ChevronRight, ArrowRight } from "lucide-react";
 import { useAccessToken } from "@nhost/nextjs";
 
-export default function EnhancedBookingsList() {
+export default function EnhancedBookingsList({venueId}) {
   const [topBookings, setTopBookings] = useState([]);
   const accessToken = useAccessToken()
   const [loading, setIsLoading] = useState(true);
@@ -29,8 +29,8 @@ export default function EnhancedBookingsList() {
         },
         body: JSON.stringify({
           query: `
-            query GetSellerBookings($userId: uuid!) {
-              venues(where: { user_id: { _eq: $userId } }) {
+            query GetSellerBookings($venueId: uuid!) {
+              venues(where: { id: { _eq: $venueId } }) {
                 id
                 title
                 courts {
@@ -58,7 +58,7 @@ export default function EnhancedBookingsList() {
               }
             }
           `,
-          variables: { userId },
+          variables: { venueId },
         }),
       });
   

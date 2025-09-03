@@ -13,7 +13,7 @@ import {
   AMENITY_CATEGORIES,
 } from "../constants/venue-options";
 
-const VenueDetails = () => {
+const VenueDetails = ({venueId}) => {
   const user = useUserData();
   const accessToken = useAccessToken();
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ const VenueDetails = () => {
             body: JSON.stringify({
               query: `
                 query GetVenueByUserId {
-                  venues(where: {user_id: {_eq: "${user.id}"}}) {
+                  venues(where: {id: {_eq: "${venueId}"}}) {
                     id
                     title
                     description
@@ -186,7 +186,7 @@ const VenueDetails = () => {
       };
     });
     
-    amenities.forEach(amenityName => {
+    amenities?.forEach(amenityName => {
       const amenity = AMENITIES_LIST.find(a => a.name === amenityName);
       if (amenity) {
         categorized[amenity.category].items.push(amenityName);
@@ -285,9 +285,9 @@ const VenueDetails = () => {
 
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-4 text-gray-800">Sports Available</h3>
-              {formData.sports.length > 0 ? (
+              {formData?.sports?.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {formData.sports.map((sport) => (
+                  {formData?.sports?.map((sport) => (
                     <div key={sport} className="flex items-center p-3 bg-teal-50 rounded-lg border border-teal-100">
                       <span className="text-xl mr-2">{getSportIcon(sport)}</span>
                       <span className="font-medium text-teal-800">{sport}</span>
@@ -304,7 +304,7 @@ const VenueDetails = () => {
           <div className="space-y-6">
             <Card className="p-6">
               <h3 className="text-xl font-semibold mb-4 text-gray-800">Amenities</h3>
-              {formData.amenities.length > 0 ? (
+              {formData.amenities?.length > 0 ? (
                 <div className="space-y-6">
                   {Object.values(categorizedAmenities).map((category: any) => 
                     category.items.length > 0 && (
