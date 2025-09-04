@@ -57,9 +57,9 @@ export default function EnhancedBookingsList({ bookings = [] }) {
           <span className="inline-block w-1 h-5 bg-blue-500 rounded mr-2"></span>
           Recent Bookings
         </h2>
-        <button className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors hover:gap-2">
+        {/* <button className="text-sm font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors hover:gap-2">
           View all <ChevronRight className="w-4 h-4" />
-        </button>
+        </button> */}
       </div>
 
       <div className="space-y-3">

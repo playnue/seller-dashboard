@@ -393,7 +393,7 @@ const fetchVenues = async () => {
                               {formatTimeRange(slot.start_at, slot.end_at)}
                             </span>
                             <span className="text-sm text-gray-600 block">
-                              Price: ${slot.price}
+                              Price: ₹{slot.price.substring(1)}
                             </span>
                           </div>
                           <Button
