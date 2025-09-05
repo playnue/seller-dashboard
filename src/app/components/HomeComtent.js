@@ -520,7 +520,6 @@ export default function HomeContent({venueId}) {
           value={totalBookings.count}
           icon={Package}
           change={totalBookings.change}
-          subtitle="Last 30 days"
           textColor="text-blue-600"
           bgColor="bg-blue-50"
         />
@@ -529,7 +528,6 @@ export default function HomeContent({venueId}) {
           value={`₹${totalRevenue.total.toLocaleString()}`}
           icon={DollarSign}
           change={totalRevenue.change}
-          subtitle="Last 30 days"
           textColor="text-amber-600"
           bgColor="bg-amber-50"
         />

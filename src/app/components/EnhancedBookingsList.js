@@ -78,14 +78,12 @@ export default function EnhancedBookingsList({venueId}) {
       const excelData = dataToDownload.map(booking => ({
         'Booking ID': booking.id,
         'Customer Name': booking.user?.displayName || 'Guest User',
-        'Customer Email': booking.user?.email || 'N/A',
         'Venue': booking.venue_name,
         'Court': booking.court_name,
         'Date': new Date(booking.slot.date).toLocaleDateString('en-IN'),
         'Time Slot': `${formatTime(booking.slot.start_at)} - ${formatTime(booking.slot.end_at)}`,
         'Payment Type': booking.payment_type === 2 ? "Full Payment" : booking.payment_type === 1 ? "50% Advance" : "Pending",
         'Amount (₹)': calculatePaymentAmount(booking),
-        'Booking Created': new Date(booking.created_at).toLocaleString('en-IN')
       }));
 
       // Create workbook and worksheet
@@ -377,7 +375,7 @@ export default function EnhancedBookingsList({venueId}) {
                           <div className="text-sm font-medium text-gray-900">
                             {booking.user?.displayName || 'Guest User'}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center gap-1">
+                          {/* <div className="text-sm text-gray-500 flex items-center gap-1">
                             <Mail className="w-3 h-3" />
                             {booking.user?.email || 'N/A'}
                           </div>
@@ -386,7 +384,7 @@ export default function EnhancedBookingsList({venueId}) {
                               <Phone className="w-3 h-3" />
                               {booking.user.phoneNumber}
                             </div>
-                          )}
+                          )} */}
                         </div>
                       </div>
                     </td>
