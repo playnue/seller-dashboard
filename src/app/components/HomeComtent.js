@@ -758,7 +758,7 @@ export default function HomeContent({venueId}) {
                             </span>
                           </div>
                           <span className="text-sm font-semibold text-green-700">
-                            ₹{slot.price}
+                            ₹{slot.price.slice(1)}
                           </span>
                         </div>
                       ))}
@@ -778,10 +778,10 @@ export default function HomeContent({venueId}) {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Phone className="w-4 h-4 text-gray-500" />
-                    {/* <span>Book Now: {venueInfo.phone}</span> */}
+                    <span>Book Now: {user.phoneNumber}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <MapPin className="w-4 h-4 text-gray-500" />
+                    {/* <MapPin className="w-4 h-4 text-gray-500" /> */}
                     {/* <span>{venueInfo.address}</span> */}
                   </div>
                 </div>
