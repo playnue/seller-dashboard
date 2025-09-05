@@ -8,7 +8,14 @@ import {
   Activity,
   Clock,
   DollarSign,
-  Package
+  Package,
+  Share2,
+  Download,
+  Copy,
+  CheckCircle,
+  MapPin,
+  Phone,
+  RefreshCw
 } from "lucide-react";
 import {
   BarChart,
@@ -22,7 +29,7 @@ import {
 import { useAccessToken, useUserData } from "@nhost/nextjs";
 import RecentBookingsCard from "./RecentBookingsCard"
 import { useRouter } from "next/navigation";
-
+import html2canvas from 'html2canvas';
 export default function HomeContent({venueId}) {
   const user = useUserData();
   const router = useRouter()
@@ -38,6 +45,13 @@ export default function HomeContent({venueId}) {
   const [totalBookings, setTotalBookings] = useState({ count: 0, monthlyCount: 0, change: 0 });
   const [totalRevenue, setTotalRevenue] = useState({ total: 0, monthlyTotal: 0, change: 0 });
   const [popularTimeSlots, setPopularTimeSlots] = useState([]);
+
+  // New states for availability feature
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [venueInfo, setVenueInfo] = useState({ name: ''});
+  const [copied, setCopied] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
   const calculateSportsDistribution = (venues) => {
     // Create a counter for each sport
@@ -175,6 +189,73 @@ export default function HomeContent({venueId}) {
       change: parseFloat(revenueChange.toFixed(1))
     });
   };
+
+  // New function to calculate available slots
+  const calculateAvailableSlots = (venues, selectedDate) => {
+    if (!venues || venues.length === 0) return [];
+
+    const venue = venues[0];
+    setVenueInfo({
+      name: venue.title,
+      // address: venue.address || 'Add venue address',
+      // phone: venue.phone || 'Add contact number'
+    });
+
+    const availableSlotsByDate = [];
+    
+    venue.courts.forEach(court => {
+      const courtSlots = court.slots.filter(slot => slot.date === selectedDate);
+      const availableCourtSlots = courtSlots.filter(slot => 
+        !slot.bookings || slot.bookings.length === 0
+      );
+
+      if (availableCourtSlots.length > 0) {
+        // Sort slots by start time
+        availableCourtSlots.sort((a, b) => a.start_at.localeCompare(b.start_at));
+        
+        // Group consecutive slots
+        const groupedSlots = [];
+        let currentGroup = null;
+
+        availableCourtSlots.forEach(slot => {
+          if (!currentGroup) {
+            currentGroup = {
+              court: court.name,
+              start: slot.start_at,
+              end: slot.end_at,
+              price: slot.price,
+              slots: [slot]
+            };
+          } else if (currentGroup.end === slot.start_at) {
+            // Consecutive slot found
+            currentGroup.end = slot.end_at;
+            currentGroup.slots.push(slot);
+          } else {
+            // Not consecutive, push current group and start new
+            groupedSlots.push(currentGroup);
+            currentGroup = {
+              court: court.name,
+              start: slot.start_at,
+              end: slot.end_at,
+              price: slot.price,
+              slots: [slot]
+            };
+          }
+        });
+
+        if (currentGroup) {
+          groupedSlots.push(currentGroup);
+        }
+
+        availableSlotsByDate.push({
+          courtName: court.name,
+          slots: groupedSlots
+        });
+      }
+    });
+
+    setAvailableSlots(availableSlotsByDate);
+  };
   
   const fetchTurfBookings = async (venueId) => {
     try {
@@ -192,6 +273,8 @@ export default function HomeContent({venueId}) {
                 id
                 title
                 sports
+                
+                
                 courts {
                   id
                   name
@@ -227,6 +310,9 @@ export default function HomeContent({venueId}) {
         console.error("GraphQL errors:", errors);
         return;
       }
+
+      // Calculate available slots for today
+      calculateAvailableSlots(data?.venues || [], selectedDate);
 
       const allBookings =
         data?.venues.flatMap((venue) =>
@@ -283,7 +369,8 @@ export default function HomeContent({venueId}) {
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
     const lastWeekDate = lastWeek.toISOString().split('T')[0];
-    console.log("Same day last week:", lastWeekDate);
+    
+        console.log("Same day last week:", lastWeekDate);
     
     // Count today's bookings
     const todayBookings = bookings.filter(booking => booking.slot.date === today);
@@ -424,6 +511,79 @@ export default function HomeContent({venueId}) {
     setPopularTimeSlots(topTimeSlots);
   };
 
+  // Helper functions for availability feature
+  const formatTime12Hour = (time24) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
+  };
+
+  const calculateDuration = (start, end) => {
+    const [startHours, startMinutes] = start.split(':').map(Number);
+    const [endHours, endMinutes] = end.split(':').map(Number);
+    
+    const totalStartMinutes = startHours * 60 + startMinutes;
+    const totalEndMinutes = endHours * 60 + endMinutes;
+    
+    const durationMinutes = totalEndMinutes - totalStartMinutes;
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+    
+    if (hours > 0 && minutes > 0) {
+      return `${hours}.${minutes === 30 ? '5' : '0'} hours`;
+    } else if (hours > 0) {
+      return `${hours} hour${hours > 1 ? 's' : ''}`;
+    } else {
+      return `${minutes} mins`;
+    }
+  };
+
+  const generateShareableText = () => {
+    if (availableSlots.length === 0) return '';
+
+    const dateObj = new Date(selectedDate);
+    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    let message = `🏟️ *${venueInfo.name} - Slots Available!*\n`;
+    message += `📅 ${formattedDate}\n\n`;
+
+    availableSlots.forEach(court => {
+      message += `✅ *${court.courtName}:*\n`;
+      court.slots.forEach(slot => {
+        const duration = calculateDuration(slot.start, slot.end);
+        message += `• ${formatTime12Hour(slot.start)} - ${formatTime12Hour(slot.end)} (${duration})\n`;
+      });
+      message += '\n';
+    });
+
+    // message += `📞 Book Now: ${venueInfo.phone}\n`;
+    // message += `📍 Location: ${venueInfo.address}\n\n`;
+    message += `⚡ Hurry! Limited slots available.`;
+
+    return message;
+  };
+
+  const copyToClipboard = () => {
+    const text = generateShareableText();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const refreshAvailability = () => {
+    setIsLoadingAvailability(true);
+    fetchTurfBookings(venueId);
+    setTimeout(() => setIsLoadingAvailability(false), 1000);
+  };
+
   const renderCustomizedLabel = (props) => {
     const { x, y, width, value, fill } = props;
     return (
@@ -492,7 +652,7 @@ export default function HomeContent({venueId}) {
     if (user?.id && venueId) {
       fetchTurfBookings(venueId);
     }
-  }, [user?.id, venueId]);
+  }, [user?.id, venueId, selectedDate]);
 
   return (
     <div className="p-6">
@@ -533,43 +693,191 @@ export default function HomeContent({venueId}) {
         />
       </div>
 
-      {/* Middle Section */}
+      {/* Availability Share Widget */}
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Share2 className="w-5 h-5 text-blue-500" />
+              Share Today's Availability
+            </h2>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button
+                onClick={refreshAvailability}
+                className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all ${isLoadingAvailability ? 'animate-spin' : ''}`}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Shareable Content Area */}
+                    <div id="availability-card" className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800">{venueInfo.name}</h3>
+                <p className="text-sm text-gray-600">
+                  {new Date(selectedDate).toLocaleDateString('en-IN', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Available Now
+                </span>
+              </div>
+            </div>
+
+            {availableSlots.length > 0 ? (
+              <div className="space-y-4">
+                {availableSlots.map((court, index) => (
+                  <div key={index} className="bg-white rounded-lg p-4">
+                    <h4 className="font-semibold text-gray-800 mb-2">{court.courtName}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {court.slots.map((slot, slotIndex) => (
+                        <div key={slotIndex} className="flex items-center justify-between bg-green-50 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-gray-800">
+                              {formatTime12Hour(slot.start)} - {formatTime12Hour(slot.end)}
+                            </span>
+                            <span className="text-xs text-gray-600">
+                              ({calculateDuration(slot.start, slot.end)})
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-green-700">
+                            ₹{slot.price}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-600">No available slots for the selected date</p>
+              </div>
+            )}
+
+            {availableSlots.length > 0 && (
+              <div className="mt-6 pt-4 border-t border-blue-200">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <Phone className="w-4 h-4 text-gray-500" />
+                    {/* <span>Book Now: {venueInfo.phone}</span> */}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-700">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    {/* <span>{venueInfo.address}</span> */}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          {availableSlots.length > 0 && (
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                onClick={copyToClipboard}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                  copied 
+                    ? 'bg-green-500 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`}
+              >
+                {copied ? (
+                  <>
+                    <CheckCircle className="w-4 h-4" />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" />
+                    Copy Message
+                  </>
+                )}
+              </button>
+              
+              <button
+                onClick={() => {
+                  // Using html2canvas to capture the element
+                  const element = document.getElementById('availability-card');
+                  if (window.html2canvas) {
+                    window.html2canvas(element).then(canvas => {
+                      const link = document.createElement('a');
+                      link.download = `${venueInfo.name}_availability_${selectedDate}.png`;
+                      link.href = canvas.toDataURL();
+                      link.click();
+                    });
+                  } else {
+                    alert('Please install html2canvas library: npm install html2canvas');
+                  }
+                }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download Image
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Popular Time Slots Chart */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        {/* Most Popular Time Slots */}
-        <div className="md:col-span-2 bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-medium mb-4">
+        <div className="md:col-span-2 bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
             Popular Time Slots (This Week)
           </h2>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                width={500}
-                height={300}
-                data={popularTimeSlots}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 20,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar
-                  dataKey="bookings"
-                  fill="#8884d8"
-                  label={renderCustomizedLabel}
-                />
-              </BarChart>
-            </ResponsiveContainer>
+            {popularTimeSlots.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={popularTimeSlots}
+                  margin={{
+                    top: 5,
+                    right: 30,
+                    left: 20,
+                    bottom: 5,
+                  }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip />
+                  <Bar
+                    dataKey="bookings"
+                    fill="#8884d8"
+                    label={renderCustomizedLabel}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-gray-500">No booking data available</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Sport Distribution */}
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-medium mb-4">Sport Distribution</h2>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sport Distribution</h2>
           {sportDistribution.length > 0 ? (
             <div className="space-y-4">
               {sportDistribution.map((item) => (
@@ -581,7 +889,7 @@ export default function HomeContent({venueId}) {
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
-                        className="h-2 rounded-full"
+                        className="h-2 rounded-full transition-all duration-500"
                         style={{
                           width: `${item.value}%`,
                           backgroundColor: item.color,
