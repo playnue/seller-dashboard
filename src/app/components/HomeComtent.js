@@ -38,7 +38,11 @@ export default function HomeContent({ venueId }) {
   const [customerDetails, setCustomerDetails] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [sportDistribution, setSportDistribution] = useState([]);
-
+  const [currentPage, setCurrentPage] = useState(1);
+  const [slotsPerPage] = useState(12);
+  const [selectedCourt, setSelectedCourt] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all"); // 'all', 'available', 'booked'
+  const [sortBy, setSortBy] = useState("time");
   // State variables for the metrics
   const [todayBookings, setTodayBookings] = useState({
     count: 0,
@@ -648,6 +652,88 @@ export default function HomeContent({ venueId }) {
     );
   };
 
+  const formatPrice = (price) => {
+    if (!price) return "₹0";
+    return `₹${price.toString().replace("₹", "")}`;
+  };
+
+  const getSlotDurationInMinutes = (start, end) => {
+    const [startHours, startMinutes] = start.split(":").map(Number);
+    const [endHours, endMinutes] = end.split(":").map(Number);
+    return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+  };
+
+  const getAllSlots = () => {
+    let allSlots = [];
+    availableSlots.forEach((court) => {
+      court.slots.forEach((slot) => {
+        allSlots.push({
+          ...slot,
+          courtName: court.courtName,
+          durationMinutes: getSlotDurationInMinutes(slot.start_at, slot.end_at),
+        });
+      });
+    });
+    return allSlots;
+  };
+
+  const getFilteredAndSortedSlots = () => {
+    let slots = getAllSlots();
+
+    // Filter by court
+    if (selectedCourt !== "all") {
+      slots = slots.filter((slot) => slot.courtName === selectedCourt);
+    }
+
+    // Filter by status
+    if (filterStatus === "available") {
+      slots = slots.filter((slot) => !slot.booked);
+    } else if (filterStatus === "booked") {
+      slots = slots.filter((slot) => slot.booked);
+    }
+
+    // Sort
+    slots.sort((a, b) => {
+      switch (sortBy) {
+        case "price":
+          const priceA = parseFloat(a.price.toString().replace("₹", ""));
+          const priceB = parseFloat(b.price.toString().replace("₹", ""));
+          return priceA - priceB;
+        case "duration":
+          return a.durationMinutes - b.durationMinutes;
+        case "time":
+        default:
+          return a.start_at.localeCompare(b.start_at);
+      }
+    });
+
+    return slots;
+  };
+
+  const getPaginatedSlots = () => {
+    const filteredSlots = getFilteredAndSortedSlots();
+    const startIndex = (currentPage - 1) * slotsPerPage;
+    const endIndex = startIndex + slotsPerPage;
+    return filteredSlots.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = () => {
+    const filteredSlots = getFilteredAndSortedSlots();
+    return Math.ceil(filteredSlots.length / slotsPerPage);
+  };
+
+  const getUniqueCourtNames = () => {
+    return [...new Set(availableSlots.map((court) => court.courtName))];
+  };
+
+  // Reset pagination when filters change
+  const handleFilterChange = (type, value) => {
+    setCurrentPage(1);
+    if (type === "court") setSelectedCourt(value);
+    if (type === "status") setFilterStatus(value);
+    if (type === "sort") setSortBy(value);
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!user) {
@@ -735,7 +821,7 @@ export default function HomeContent({ venueId }) {
             id="availability-card"
             className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200"
           >
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-xl font-bold text-gray-800">
                   {venueInfo.name}
@@ -763,151 +849,299 @@ export default function HomeContent({ venueId }) {
               </div>
             </div>
 
+            {/* Enhanced Filters and Controls */}
+            <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {/* Court Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Court
+                  </label>
+                  <select
+                    value={selectedCourt}
+                    onChange={(e) =>
+                      handleFilterChange("court", e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Courts</option>
+                    {getUniqueCourtNames().map((court) => (
+                      <option key={court} value={court}>
+                        {court}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Status Filter */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={filterStatus}
+                    onChange={(e) =>
+                      handleFilterChange("status", e.target.value)
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="all">All Slots</option>
+                    <option value="available">Available Only</option>
+                    <option value="booked">Booked Only</option>
+                  </select>
+                </div>
+
+                {/* Sort By */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Sort By
+                  </label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => handleFilterChange("sort", e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="time">Time</option>
+                    <option value="price">Price</option>
+                    <option value="duration">Duration</option>
+                  </select>
+                </div>
+
+                {/* Quick Stats */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                    Quick Stats
+                  </label>
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
+                      {
+                        getFilteredAndSortedSlots().filter(
+                          (slot) => !slot.booked
+                        ).length
+                      }{" "}
+                      Available
+                    </span>
+                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded">
+                      {
+                        getFilteredAndSortedSlots().filter(
+                          (slot) => slot.booked
+                        ).length
+                      }{" "}
+                      Booked
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {availableSlots.length > 0 ? (
-              <div className="space-y-6">
-                {availableSlots.map((court, index) => (
-                  <div key={index} className="bg-white rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-blue-600" />
-                      {court.courtName}
+              <div>
+                {/* Enhanced Slots Grid */}
+                <div className="bg-white rounded-lg p-4 mb-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="font-semibold text-gray-800">
+                      Showing {getPaginatedSlots().length} of{" "}
+                      {getFilteredAndSortedSlots().length} slots
                     </h4>
-
-                    {/* Slots Grid - 4 columns for better visibility */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
-                      {court.slots.slice(0, 12).map((slot, slotIndex) => (
-                        <div
-                          key={slotIndex}
-                          className={`relative rounded-lg p-3 border-2 transition-all duration-200 ${
-                            slot.booked
-                              ? "bg-red-50 border-red-200 opacity-75"
-                              : "bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer"
-                          }`}
-                        >
-                          {/* Status indicator */}
-                          <div
-                            className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
-                              slot.booked ? "bg-red-500" : "bg-green-500"
-                            }`}
-                          ></div>
-
-                          {/* Time display */}
-                          <div className="mb-2">
-                            <div className="text-sm font-medium text-gray-800">
-                              {formatTime12Hour(slot.start_at)}
-                            </div>
-                            <div className="text-xs text-gray-600">
-                              to {formatTime12Hour(slot.end_at)}
-                            </div>
-                          </div>
-
-                          {/* Duration */}
-                          <div className="text-xs text-gray-500 mb-1">
-                            {calculateDuration(slot.start_at, slot.end_at)}
-                          </div>
-
-                          {/* Price */}
-                          <div
-                            className={`text-sm font-semibold ${
-                              slot.booked ? "text-red-600" : "text-green-700"
-                            }`}
-                          >
-                            ₹{slot.price.toString().replace("₹", "")}
-                          </div>
-
-                          {/* Booked overlay */}
-                          {slot.booked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-red-500 bg-opacity-10 rounded-lg">
-                              <span className="text-xs font-medium text-red-600 bg-white px-2 py-1 rounded shadow-sm">
-                                BOOKED
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Show more slots indicator if there are more than 12 */}
-                    {court.slots.length > 12 && (
-                      <div className="mt-3 text-center">
-                        <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                          +{court.slots.length - 12} more slots available
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Summary for this court */}
-                    <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-sm">
-                      <span className="text-gray-600">
-                        Available:{" "}
-                        <span className="font-medium text-green-600">
-                          {court.slots.filter((slot) => !slot.booked).length}
-                        </span>
-                      </span>
-                      <span className="text-gray-600">
-                        Booked:{" "}
-                        <span className="font-medium text-red-600">
-                          {court.slots.filter((slot) => slot.booked).length}
-                        </span>
-                      </span>
-                      <span className="text-gray-600">
-                        Total:{" "}
-                        <span className="font-medium text-blue-600">
-                          {court.slots.length}
-                        </span>
-                      </span>
+                    <div className="text-sm text-gray-600">
+                      Page {currentPage} of {getTotalPages()}
                     </div>
                   </div>
-                ))}
+
+                  {/* Compact Slots Grid */}
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {getPaginatedSlots().map((slot, index) => (
+                      <div
+                        key={`${slot.courtName}-${slot.start_at}-${index}`}
+                        className={`relative rounded-lg p-3 border transition-all duration-200 ${
+                          slot.booked
+                            ? "bg-red-50 border-red-200"
+                            : "bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer"
+                        }`}
+                      >
+                        {/* Simple Status indicator */}
+                        <div
+                          className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
+                            slot.booked ? "bg-red-500" : "bg-green-500"
+                          }`}
+                        ></div>
+
+                        {/* Court name */}
+                        <div className="text-xs font-medium text-blue-600 mb-1 pr-4">
+                          {slot.courtName}
+                        </div>
+
+                        {/* Time display - Compact */}
+                        <div className="mb-2">
+                          <div className="text-sm font-bold text-gray-800">
+                            {formatTime12Hour(slot.start_at)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {formatTime12Hour(slot.end_at)}
+                          </div>
+                        </div>
+
+                        {/* Duration */}
+                        <div className="text-xs text-gray-500 mb-1">
+                          {calculateDuration(slot.start_at, slot.end_at)}
+                        </div>
+
+                        {/* Price - Compact */}
+                        <div
+                          className={`text-sm font-bold ${
+                            slot.booked ? "text-red-600" : "text-green-700"
+                          }`}
+                        >
+                          {formatPrice(slot.price.slice(1))}
+                        </div>
+
+                        {/* Simple Booked overlay */}
+                        {slot.booked && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-red-100 bg-opacity-60 rounded-lg">
+                            <span className="text-xs font-bold text-red-600">
+                              BOOKED
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* No slots message */}
+                  {getPaginatedSlots().length === 0 && (
+                    <div className="text-center py-12">
+                      <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-600 text-lg">No slots found</p>
+                      <p className="text-gray-500 text-sm">
+                        Try adjusting your filters
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Enhanced Pagination */}
+                {getTotalPages() > 1 && (
+                  <div className="flex items-center justify-between bg-white rounded-lg p-4">
+                    <div className="text-sm text-gray-600">
+                      Showing {(currentPage - 1) * slotsPerPage + 1} to{" "}
+                      {Math.min(
+                        currentPage * slotsPerPage,
+                        getFilteredAndSortedSlots().length
+                      )}{" "}
+                      of {getFilteredAndSortedSlots().length} results
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() =>
+                          setCurrentPage(Math.max(1, currentPage - 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Previous
+                      </button>
+
+                      {/* Page numbers */}
+                      <div className="flex items-center gap-1">
+                        {Array.from(
+                          { length: Math.min(5, getTotalPages()) },
+                          (_, i) => {
+                            let pageNum;
+                            if (getTotalPages() <= 5) {
+                              pageNum = i + 1;
+                            } else if (currentPage <= 3) {
+                              pageNum = i + 1;
+                            } else if (currentPage >= getTotalPages() - 2) {
+                              pageNum = getTotalPages() - 4 + i;
+                            } else {
+                              pageNum = currentPage - 2 + i;
+                            }
+
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => setCurrentPage(pageNum)}
+                                className={`w-10 h-10 text-sm rounded-lg transition-colors ${
+                                  currentPage === pageNum
+                                    ? "bg-blue-600 text-white"
+                                    : "border border-gray-300 hover:bg-gray-50"
+                                }`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          }
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          setCurrentPage(
+                            Math.min(getTotalPages(), currentPage + 1)
+                          )
+                        }
+                        disabled={currentPage === getTotalPages()}
+                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-600">
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600 text-lg">
                   No slots found for the selected date
                 </p>
+                <button
+                  onClick={refreshAvailability}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Refresh Availability
+                </button>
               </div>
             )}
 
-            {/* Overall summary */}
+            {/* Enhanced Overall Summary */}
             {availableSlots.length > 0 && (
-              <div className="mt-6 pt-4 border-t border-blue-200">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="bg-green-100 rounded-lg p-3">
-                    <div className="text-lg font-bold text-green-700">
-                      {availableSlots.reduce(
-                        (total, court) =>
-                          total +
-                          court.slots.filter((slot) => !slot.booked).length,
-                        0
-                      )}
+              <div className="mt-6 pt-6 border-t border-blue-200">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-green-600">
+                      {getAllSlots().filter((slot) => !slot.booked).length}
                     </div>
-                    <div className="text-xs text-green-600">
-                      Available Slots
-                    </div>
+                    <div className="text-xs text-gray-600">Available Slots</div>
                   </div>
-                  <div className="bg-red-100 rounded-lg p-3">
-                    <div className="text-lg font-bold text-red-700">
-                      {availableSlots.reduce(
-                        (total, court) =>
-                          total +
-                          court.slots.filter((slot) => slot.booked).length,
-                        0
-                      )}
+                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-red-600">
+                      {getAllSlots().filter((slot) => slot.booked).length}
                     </div>
-                    <div className="text-xs text-red-600">Booked Slots</div>
+                    <div className="text-xs text-gray-600">Booked Slots</div>
                   </div>
-                  <div className="bg-blue-100 rounded-lg p-3">
-                    <div className="text-lg font-bold text-blue-700">
-                      {availableSlots.reduce(
-                        (total, court) => total + court.slots.length,
-                        0
-                      )}
+                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-blue-600">
+                      {getAllSlots().length}
                     </div>
-                    <div className="text-xs text-blue-600">Total Slots</div>
+                    <div className="text-xs text-gray-600">Total Slots</div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {Math.round(
+                        (getAllSlots().filter((slot) => !slot.booked).length /
+                          getAllSlots().length) *
+                          100
+                      )}
+                      %
+                    </div>
+                    <div className="text-xs text-gray-600">Availability</div>
                   </div>
                 </div>
 
-                <div className="mt-4 space-y-2">
+                <div className="bg-white rounded-lg p-4">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Phone className="w-4 h-4 text-gray-500" />
                     <span>Book Now: {user.phoneNumber}</span>
