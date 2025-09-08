@@ -4,7 +4,17 @@ import { useAccessToken, useUserData } from "@nhost/nextjs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Clock } from "lucide-react";
+import { 
+  Clock, 
+  X, 
+  User, 
+  Phone, 
+  DollarSign, 
+  CreditCard,
+  Building,
+  MapPin,
+  Loader2
+} from "lucide-react";
 
 const SellerOfflineBooking = ({ venueId }) => {
   const [venues, setVenues] = useState([]);
@@ -17,6 +27,19 @@ const SellerOfflineBooking = ({ venueId }) => {
   const accessToken = useAccessToken();
   const user = useUserData();
   const userId = user?.id;
+
+  // Modal and form states
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    customerName: "",
+    customerPhone: "",
+    amount: "",
+    bookingSource: "offline", // offline, playo, other
+    notes: "",
+    paymentReceived: true
+  });
 
   // Early return if essential data is missing
   if (!userId || !accessToken) {
@@ -44,64 +67,62 @@ const SellerOfflineBooking = ({ venueId }) => {
     setSelectedDate(localDate);
   };
 
-  // Fetch all venues for this seller
-  // In SellerOfflineBooking component, modify the fetchVenues function:
-const fetchVenues = async () => {
-  if (!userId) {
-    console.warn("fetchVenues called without userId");
-    return;
-  }
+  // Fetch venues function (same as before)
+  const fetchVenues = async () => {
+    if (!userId) {
+      console.warn("fetchVenues called without userId");
+      return;
+    }
 
-  try {
-    setLoading(true); // Make sure you have a loading state
-    const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `
-          query GetVenues($userId: uuid!) {
-            venues(where: { user_id: { _eq: $userId } }) {
-              id
-              title
-              user_id
-            }
-          }
-        `,
-        variables: {
-          userId, // Make sure userId is valid here
+    try {
+      setLoading(true);
+      const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
         },
-      }),
-    });
+        body: JSON.stringify({
+          query: `
+            query GetVenues($userId: uuid!) {
+              venues(where: { user_id: { _eq: $userId } }) {
+                id
+                title
+                user_id
+              }
+            }
+          `,
+          variables: {
+            userId,
+          },
+        }),
+      });
 
-    const data = await response.json();
-    if (data.errors) {
-      console.error("GraphQL errors:", data.errors);
-      throw new Error("Failed to fetch venues");
+      const data = await response.json();
+      if (data.errors) {
+        console.error("GraphQL errors:", data.errors);
+        throw new Error("Failed to fetch venues");
+      }
+      
+      const sellerVenues = data.data.venues;
+      setVenues(sellerVenues);
+      
+      if (venueId && sellerVenues.find(v => v.id === venueId)) {
+        setSelectedVenue(venueId);
+        await fetchCourts(venueId);
+      } else if (sellerVenues.length > 0) {
+        setSelectedVenue(sellerVenues[0].id);
+        await fetchCourts(sellerVenues[0].id);
+      }
+      
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching venues:", error);
+      setLoading(false);
     }
-    
-    const sellerVenues = data.data.venues;
-    setVenues(sellerVenues);
-    
-    // Only proceed if we have venues and a valid venueId prop
-    if (venueId && sellerVenues.find(v => v.id === venueId)) {
-      setSelectedVenue(venueId);
-      await fetchCourts(venueId);
-    } else if (sellerVenues.length > 0) {
-      setSelectedVenue(sellerVenues[0].id);
-      await fetchCourts(sellerVenues[0].id);
-    }
-    
-    setLoading(false);
-  } catch (error) {
-    console.error("Error fetching venues:", error);
-    setLoading(false);
-  }
-};
+  };
 
-  // Fetch courts for selected venue - only call if venueId is valid
+  // Fetch courts function (same as before)
   const fetchCourts = async (targetVenueId) => {
     if (!targetVenueId) {
       console.warn("fetchCourts called without venueId");
@@ -150,7 +171,7 @@ const fetchVenues = async () => {
     }
   };
 
-  // Fetch slots for selected court and date - only call if both are valid
+  // Enhanced fetch slots to include booking information
   const fetchSlots = async (courtId, date) => {
     if (!courtId || !date) {
       console.warn("fetchSlots called without required parameters", { courtId, date });
@@ -175,6 +196,14 @@ const fetchVenues = async () => {
                 price
                 booked
                 date
+                bookings {
+                  id
+                  user {
+                    displayName
+                    phoneNumber
+                  }
+                  
+                }
               }
             }
           `,
@@ -198,44 +227,88 @@ const fetchVenues = async () => {
     }
   };
 
-  const handleBookingToggle = async (slot) => {
-    try {
-      const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: `
-            mutation UpdateSlot($slotId: uuid!, $booked: Boolean!) {
-              update_slots_by_pk(
-                pk_columns: { id: $slotId }
-                _set: { booked: $booked }
-              ) {
-                id
-                booked
-              }
-            }
-          `,
-          variables: {
-            slotId: slot.id,
-            booked: !slot.booked,
-          },
-        }),
-      });
-
-      const data = await response.json();
-      if (data.errors) throw new Error("Failed to update booking status");
-
-      // Refresh slots after update
-      if (selectedCourt && selectedDate) {
-        fetchSlots(selectedCourt, selectedDate);
-      }
-    } catch (error) {
-      console.error("Error updating booking status:", error);
-    }
+  const handleOfflineBooking = (slot) => {
+    setSelectedSlot(slot);
+    setBookingForm({
+      ...bookingForm,
+      amount: slot.price.toString().replace(/[^0-9]/g, "")
+    });
+    setShowBookingModal(true);
   };
+
+  const handleFormChange = (field, value) => {
+    setBookingForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const validateForm = () => {
+    if (!bookingForm.customerName.trim()) {
+      alert("Please enter customer name");
+      return false;
+    }
+    if (!bookingForm.customerPhone.trim() || bookingForm.customerPhone.length < 10) {
+      alert("Please enter valid phone number");
+      return false;
+    }
+    if (!bookingForm.amount || parseFloat(bookingForm.amount) <= 0) {
+      alert("Please enter valid amount");
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmitBooking = async () => {
+  if (!validateForm()) return;
+
+  setIsSubmitting(true);
+
+  try {
+    // Update this URL to point to your Nhost function
+    const response = await fetch(`${process.env.NEXT_PUBLIC_FUNCTIONS}/razorpay/offline-booking`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        slot_id: selectedSlot.id,
+        customer_name: bookingForm.customerName,
+        customer_phone: bookingForm.customerPhone,
+        amount: parseFloat(bookingForm.amount),
+        booking_source: bookingForm.bookingSource,
+        notes: bookingForm.notes,
+        payment_received: bookingForm.paymentReceived
+      }),
+    });
+
+    const data = await response.json();
+
+    if (response.ok && data.success) {
+      // Success handling
+      alert("Booking created successfully!");
+      setShowBookingModal(false);
+      setBookingForm({
+        customerName: "",
+        customerPhone: "",
+        amount: "",
+        bookingSource: "offline",
+        notes: "",
+        paymentReceived: true
+      });
+      // Refresh slots to show updated booking status
+      fetchSlots(selectedCourt, selectedDate);
+    } else {
+      throw new Error(data.message || "Failed to create booking");
+    }
+  } catch (error) {
+    console.error("Error creating booking:", error);
+    alert(`Failed to create booking: ${error.message}`);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const formatTimeRange = (startTime, endTime) => {
     const formatTime = (time) => {
@@ -268,14 +341,13 @@ const fetchVenues = async () => {
     }
   };
 
-  // Update useEffect to handle prop changes
+  // UseEffects (same as before)
   useEffect(() => {
     if (userId && accessToken) {
       fetchVenues();
     }
   }, [userId, accessToken]);
 
-  // Handle venueId prop changes
   useEffect(() => {
     if (venueId && venueId !== selectedVenue) {
       setSelectedVenue(venueId);
@@ -306,22 +378,28 @@ const fetchVenues = async () => {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Seller Offline Booking</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Offline Booking Management
+          </CardTitle>
+          <p className="text-sm text-gray-600">
+                        Mark slots as booked for offline or external platform bookings
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Venue Selection */}
           {venues.length > 0 ? (
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Your Venues</label>
+              <label className="block text-sm font-medium mb-2">Select Venue</label>
               <div className="flex flex-wrap gap-2">
                 {venues.map((venue) => (
                   <button
                     key={venue.id}
                     onClick={() => handleVenueChange(venue.id)}
-                    className={`px-4 py-2 rounded-md text-sm ${
+                    className={`px-4 py-2 rounded-md text-sm transition-all ${
                       selectedVenue === venue.id
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 hover:bg-gray-300"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                     }`}
                   >
                     {venue.title}
@@ -338,16 +416,16 @@ const fetchVenues = async () => {
           {/* Court Selection */}
           {selectedVenue && courts.length > 0 && (
             <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">Courts at {currentVenueName}</label>
+              <label className="block text-sm font-medium mb-2">Select Court</label>
               <div className="flex flex-wrap gap-2">
                 {courts.map((court) => (
                   <button
                     key={court.id}
                     onClick={() => handleCourtChange(court.id)}
-                    className={`px-4 py-2 rounded-md text-sm ${
+                    className={`px-4 py-2 rounded-md text-sm transition-all ${
                       selectedCourt === court.id
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 hover:bg-gray-300"
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                     }`}
                   >
                     {court.name}
@@ -369,47 +447,75 @@ const fetchVenues = async () => {
                   mode="single"
                   selected={selectedDate}
                   onSelect={handleDateSelect}
-                  className="rounded-md border"
+                  className="rounded-md border shadow-sm"
                 />
               </div>
 
               <div>
                 <h3 className="text-md font-medium mb-2">
-                  Available Slots for {currentCourtName}
+                  Slots for {currentCourtName}
                 </h3>
                 {slots.length > 0 ? (
-                  <div className="space-y-2 max-h-80 overflow-y-auto p-2">
-                    {slots.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className={`p-3 rounded-lg border ${
-                          slot.booked ? "bg-orange-100" : "bg-green-100"
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <span className="font-medium flex items-center">
-                              <Clock className="h-4 w-4 mr-1" />
-                              {formatTimeRange(slot.start_at, slot.end_at)}
-                            </span>
-                            <span className="text-sm text-gray-600 block">
-                              Price: ₹{slot.price.substring(1)}
-                            </span>
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {slots.map((slot) => {
+                      const isBooked = slot.booked || (slot.bookings && slot.bookings.length > 0);
+                      return (
+                        <div
+                          key={slot.id}
+                          className={`p-4 rounded-lg border transition-all ${
+                            isBooked 
+                              ? "bg-red-50 border-red-200" 
+                              : "bg-green-50 border-green-200 hover:shadow-md"
+                          }`}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Clock className="h-4 w-4 text-gray-600" />
+                                <span className="font-medium">
+                                  {formatTimeRange(slot.start_at, slot.end_at)}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <DollarSign className="h-3 w-3" />
+                                <span>₹{slot.price.slice(1)}</span>
+                              </div>
+                              {isBooked && slot.bookings && slot.bookings[0] && (
+                                <div className="mt-2 text-xs text-gray-500">
+                                  <p>Booked by: {slot.bookings[0].user?.displayName || 'Offline Customer'}</p>
+                                  {/* {slot.bookings[0].math?.booking_source && (
+                                    <p>Source: {slot.bookings[0].math.booking_source}</p>
+                                  )} */}
+                                </div>
+                              )}
+                            </div>
+                            <Button
+                              variant={isBooked ? "outline" : "default"}
+                              size="sm"
+                              disabled={isBooked}
+                              onClick={() => handleOfflineBooking(slot)}
+                              className={`min-w-[120px] ${
+                                isBooked 
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed" 
+                                  : "bg-blue-600 hover:bg-blue-700 text-white"
+                              }`}
+                            >
+                              {isBooked ? "Already Booked" : "Book Slot"}
+                            </Button>
                           </div>
-                          <Button
-                            variant={slot.booked ? "destructive" : "default"}
-                            size="sm"
-                            onClick={() => handleBookingToggle(slot)}
-                          >
-                            {slot.booked ? "Cancel Booking" : "Book Offline"}
-                          </Button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="text-center p-8 bg-gray-50 rounded-md text-gray-500">
-                    No slots available for this date. Try selecting another date.
+                  <div className="text-center p-8 bg-gray-50 rounded-md">
+                    <Clock className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">
+                      No slots available for this date
+                    </p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Try selecting another date
+                    </p>
                   </div>
                 )}
               </div>
@@ -417,6 +523,174 @@ const fetchVenues = async () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Booking Modal */}
+      {showBookingModal && selectedSlot && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Create Offline Booking</h3>
+              <button
+                onClick={() => setShowBookingModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Slot Info */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-700 mb-2">Slot Details</h4>
+                <div className="space-y-1 text-sm">
+                  <p><span className="text-gray-500">Venue:</span> {currentVenueName}</p>
+                  <p><span className="text-gray-500">Court:</span> {currentCourtName}</p>
+                  <p><span className="text-gray-500">Date:</span> {formatDate(selectedDate)}</p>
+                  <p><span className="text-gray-500">Time:</span> {formatTimeRange(selectedSlot.start_at, selectedSlot.end_at)}</p>
+                </div>
+              </div>
+
+              {/* Customer Name */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Customer Name <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={bookingForm.customerName}
+                    onChange={(e) => handleFormChange('customerName', e.target.value)}
+                    placeholder="Enter customer name"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Customer Phone */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Phone Number <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="tel"
+                    value={bookingForm.customerPhone}
+                    onChange={(e) => handleFormChange('customerPhone', e.target.value)}
+                    placeholder="Enter 10-digit phone number"
+                    maxLength="10"
+                    className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Amount <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">₹</span>
+                  <input
+                    type="number"
+                    value={bookingForm.amount}
+                    onChange={(e) => handleFormChange('amount', e.target.value)}
+                    placeholder="Enter amount"
+                    className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              {/* Booking Source */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Booking Source
+                </label>
+                <select
+                  value={bookingForm.bookingSource}
+                  onChange={(e) => handleFormChange('bookingSource', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="offline">Walk-in/Phone Booking</option>
+                  <option value="playo">Playo</option>
+                  <option value="hudle">Hudle</option>
+                  <option value="other">Other Platform</option>
+                </select>
+              </div>
+
+              {/* Payment Status */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Payment Status
+                </label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="paymentReceived"
+                      checked={bookingForm.paymentReceived === true}
+                      onChange={() => handleFormChange('paymentReceived', true)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Payment Received</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="paymentReceived"
+                      checked={bookingForm.paymentReceived === false}
+                      onChange={() => handleFormChange('paymentReceived', false)}
+                      className="mr-2"
+                    />
+                    <span className="text-sm">Payment Pending</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={bookingForm.notes}
+                  onChange={(e) => handleFormChange('notes', e.target.value)}
+                  placeholder="Add any special notes..."
+                  rows="3"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex gap-3 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setShowBookingModal(false)}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitBooking}
+                disabled={isSubmitting}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  'Create Booking'
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

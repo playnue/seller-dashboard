@@ -15,7 +15,7 @@ import {
   CheckCircle,
   MapPin,
   Phone,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import {
   BarChart,
@@ -27,40 +27,58 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useAccessToken, useUserData } from "@nhost/nextjs";
-import RecentBookingsCard from "./RecentBookingsCard"
+import RecentBookingsCard from "./RecentBookingsCard";
 import { useRouter } from "next/navigation";
-import html2canvas from 'html2canvas';
-export default function HomeContent({venueId}) {
+import html2canvas from "html2canvas";
+export default function HomeContent({ venueId }) {
   const user = useUserData();
-  const router = useRouter()
+  const router = useRouter();
   const accessToken = useAccessToken();
   const [bookings, setTurfBookings] = useState([]);
   const [customerDetails, setCustomerDetails] = useState({});
   const [isLoading, setIsLoading] = useState(true);
   const [sportDistribution, setSportDistribution] = useState([]);
-  
+
   // State variables for the metrics
-  const [todayBookings, setTodayBookings] = useState({ count: 0, change: 0, comparison: "vs last week" });
-  const [weeklyRevenue, setWeeklyRevenue] = useState({ weekly: 0, change: 0, currency: "₹" });
-  const [totalBookings, setTotalBookings] = useState({ count: 0, monthlyCount: 0, change: 0 });
-  const [totalRevenue, setTotalRevenue] = useState({ total: 0, monthlyTotal: 0, change: 0 });
+  const [todayBookings, setTodayBookings] = useState({
+    count: 0,
+    change: 0,
+    comparison: "vs last week",
+  });
+  const [weeklyRevenue, setWeeklyRevenue] = useState({
+    weekly: 0,
+    change: 0,
+    currency: "₹",
+  });
+  const [totalBookings, setTotalBookings] = useState({
+    count: 0,
+    monthlyCount: 0,
+    change: 0,
+  });
+  const [totalRevenue, setTotalRevenue] = useState({
+    total: 0,
+    monthlyTotal: 0,
+    change: 0,
+  });
   const [popularTimeSlots, setPopularTimeSlots] = useState([]);
 
   // New states for availability feature
   const [availableSlots, setAvailableSlots] = useState([]);
-  const [venueInfo, setVenueInfo] = useState({ name: ''});
+  const [venueInfo, setVenueInfo] = useState({ name: "" });
   const [copied, setCopied] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
 
   const calculateSportsDistribution = (venues) => {
     // Create a counter for each sport
     const sportsCounter = {};
-    
+
     // Loop through venues and count sports
-    venues.forEach(venue => {
+    venues.forEach((venue) => {
       if (venue.sports && Array.isArray(venue.sports)) {
-        venue.sports.forEach(sport => {
+        venue.sports.forEach((sport) => {
           if (sportsCounter[sport]) {
             sportsCounter[sport]++;
           } else {
@@ -69,124 +87,138 @@ export default function HomeContent({venueId}) {
         });
       }
     });
-    
+
     // Calculate total count
-    const totalCount = Object.values(sportsCounter).reduce((sum, count) => sum + count, 0);
-    
+    const totalCount = Object.values(sportsCounter).reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
     // Convert to percentage and format for display
     const distribution = Object.entries(sportsCounter).map(([name, count]) => {
       return {
         name,
-        value: Math.round((count / totalCount) * 100)
+        value: Math.round((count / totalCount) * 100),
       };
     });
-    
+
     // Sort by value (highest first)
     distribution.sort((a, b) => b.value - a.value);
-    
+
     // Apply colors
-    const colors = ["#8884d8", "#83a6ed", "#8dd1e1", "#82ca9d", "#a4de6c", "#ffc658"];
+    const colors = [
+      "#8884d8",
+      "#83a6ed",
+      "#8dd1e1",
+      "#82ca9d",
+      "#a4de6c",
+      "#ffc658",
+    ];
     const distributionWithColors = distribution.map((item, index) => {
       return { ...item, color: colors[index % colors.length] };
     });
-    
+
     setSportDistribution(distributionWithColors);
   };
 
   const calculateTotalBookingsAndRevenue = (bookings) => {
     console.log("--- Total Bookings & Revenue Calculation Start ---");
-    
+
     // Get date for 30 days ago for monthly comparison
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-    
+
     // Filter bookings from the last 30 days
-    const thisMonthBookings = bookings.filter(booking => {
+    const thisMonthBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.slot.date);
       return bookingDate >= thirtyDaysAgo;
     });
-    
+
     // Filter bookings from 30-60 days ago for comparison
-    const lastMonthBookings = bookings.filter(booking => {
+    const lastMonthBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.slot.date);
       return bookingDate >= sixtyDaysAgo && bookingDate < thirtyDaysAgo;
     });
-    
+
     console.log("Total bookings count:", bookings.length);
     console.log("This month bookings count:", thisMonthBookings.length);
     console.log("Last month bookings count:", lastMonthBookings.length);
-    
+
     // Calculate total revenue
     let totalRevenueAmount = 0;
     let thisMonthRevenue = 0;
     let lastMonthRevenue = 0;
-    
+
     // Helper function to extract numeric price
     const getNumericPrice = (price) => {
       let numericPrice = 0;
-      
+
       if (price !== null && price !== undefined) {
-        if (typeof price === 'object' && price.hasOwnProperty('value')) {
+        if (typeof price === "object" && price.hasOwnProperty("value")) {
           numericPrice = parseFloat(price.value);
-        } else if (typeof price === 'string') {
-          numericPrice = parseFloat(price.replace(/[^0-9.]/g, ''));
-        } else if (typeof price === 'number') {
+        } else if (typeof price === "string") {
+          numericPrice = parseFloat(price.replace(/[^0-9.]/g, ""));
+        } else if (typeof price === "number") {
           numericPrice = price;
         }
       }
-      
+
       return isNaN(numericPrice) ? 0 : numericPrice;
     };
-    
+
     // Calculate total revenue from all bookings
-    bookings.forEach(booking => {
+    bookings.forEach((booking) => {
       totalRevenueAmount += getNumericPrice(booking.slot.price);
     });
-    
+
     // Calculate this month's revenue
-    thisMonthBookings.forEach(booking => {
+    thisMonthBookings.forEach((booking) => {
       thisMonthRevenue += getNumericPrice(booking.slot.price);
     });
-    
+
     // Calculate last month's revenue
-    lastMonthBookings.forEach(booking => {
+    lastMonthBookings.forEach((booking) => {
       lastMonthRevenue += getNumericPrice(booking.slot.price);
     });
-    
+
     // Calculate percent changes
     let bookingsChange = 0;
     if (lastMonthBookings.length > 0) {
-      bookingsChange = ((thisMonthBookings.length - lastMonthBookings.length) / lastMonthBookings.length) * 100;
+      bookingsChange =
+        ((thisMonthBookings.length - lastMonthBookings.length) /
+          lastMonthBookings.length) *
+        100;
     } else if (thisMonthBookings.length > 0) {
       bookingsChange = 100;
     }
-    
+
     let revenueChange = 0;
     if (lastMonthRevenue > 0) {
-      revenueChange = ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+      revenueChange =
+        ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
     } else if (thisMonthRevenue > 0) {
       revenueChange = 100;
     }
-    
+
     console.log("Total bookings:", bookings.length);
     console.log("Total revenue:", totalRevenueAmount);
     console.log("Bookings change:", bookingsChange);
     console.log("Revenue change:", revenueChange);
     console.log("--- Total Bookings & Revenue Calculation End ---");
-    
+
     setTotalBookings({
       count: bookings.length,
       monthlyCount: thisMonthBookings.length,
-      change: parseFloat(bookingsChange.toFixed(1))
+      change: parseFloat(bookingsChange.toFixed(1)),
     });
-    
+
     setTotalRevenue({
       total: totalRevenueAmount,
       monthlyTotal: thisMonthRevenue,
-      change: parseFloat(revenueChange.toFixed(1))
+      change: parseFloat(revenueChange.toFixed(1)),
     });
   };
 
@@ -197,66 +229,31 @@ export default function HomeContent({venueId}) {
     const venue = venues[0];
     setVenueInfo({
       name: venue.title,
-      // address: venue.address || 'Add venue address',
-      // phone: venue.phone || 'Add contact number'
+      address: venue.address || "Add venue address",
+      phone: venue.phone || "Add contact number",
     });
 
-    const availableSlotsByDate = [];
-    
-    venue.courts.forEach(court => {
-      const courtSlots = court.slots.filter(slot => slot.date === selectedDate);
-      const availableCourtSlots = courtSlots.filter(slot => 
-        !slot.bookings || slot.bookings.length === 0
+    const allSlotsByDate = [];
+
+    venue.courts.forEach((court) => {
+      const courtSlots = court.slots.filter(
+        (slot) => slot.date === selectedDate
       );
 
-      if (availableCourtSlots.length > 0) {
-        // Sort slots by start time
-        availableCourtSlots.sort((a, b) => a.start_at.localeCompare(b.start_at));
-        
-        // Group consecutive slots
-        const groupedSlots = [];
-        let currentGroup = null;
+      // Sort slots by start time
+      courtSlots.sort((a, b) => a.start_at.localeCompare(b.start_at));
 
-        availableCourtSlots.forEach(slot => {
-          if (!currentGroup) {
-            currentGroup = {
-              court: court.name,
-              start: slot.start_at,
-              end: slot.end_at,
-              price: slot.price,
-              slots: [slot]
-            };
-          } else if (currentGroup.end === slot.start_at) {
-            // Consecutive slot found
-            currentGroup.end = slot.end_at;
-            currentGroup.slots.push(slot);
-          } else {
-            // Not consecutive, push current group and start new
-            groupedSlots.push(currentGroup);
-            currentGroup = {
-              court: court.name,
-              start: slot.start_at,
-              end: slot.end_at,
-              price: slot.price,
-              slots: [slot]
-            };
-          }
-        });
-
-        if (currentGroup) {
-          groupedSlots.push(currentGroup);
-        }
-
-        availableSlotsByDate.push({
+      if (courtSlots.length > 0) {
+        allSlotsByDate.push({
           courtName: court.name,
-          slots: groupedSlots
+          slots: courtSlots, // Keep all slots (both booked and available)
         });
       }
     });
 
-    setAvailableSlots(availableSlotsByDate);
+    setAvailableSlots(allSlotsByDate);
   };
-  
+
   const fetchTurfBookings = async (venueId) => {
     try {
       const response = await fetch(process.env.NEXT_PUBLIC_NHOST_GRAPHQL_URL, {
@@ -284,6 +281,7 @@ export default function HomeContent({venueId}) {
                     start_at
                     end_at
                     price
+                    booked
                     bookings {
                       id
                       created_at
@@ -332,7 +330,7 @@ export default function HomeContent({venueId}) {
             )
           )
         ) || [];
-      
+
       calculateSportsDistribution(data?.venues || []);
 
       // Sort bookings by date and time
@@ -343,13 +341,12 @@ export default function HomeContent({venueId}) {
       });
 
       setTurfBookings(sortedBookings);
-      
+
       // Calculate all metrics
       calculateTodayBookings(sortedBookings);
       calculateWeeklyRevenue(sortedBookings);
       calculateTotalBookingsAndRevenue(sortedBookings);
       calculatePopularTimeSlots(sortedBookings);
-      
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
@@ -360,28 +357,32 @@ export default function HomeContent({venueId}) {
   const calculateTodayBookings = (bookings) => {
     console.log("--- Today's Bookings Calculation Start ---");
     console.log("Total bookings received:", bookings.length);
-    
+
     // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     console.log("Today's date:", today);
-    
+
     // Get last week's date
     const lastWeek = new Date();
     lastWeek.setDate(lastWeek.getDate() - 7);
-    const lastWeekDate = lastWeek.toISOString().split('T')[0];
-    
-        console.log("Same day last week:", lastWeekDate);
-    
+    const lastWeekDate = lastWeek.toISOString().split("T")[0];
+
+    console.log("Same day last week:", lastWeekDate);
+
     // Count today's bookings
-    const todayBookings = bookings.filter(booking => booking.slot.date === today);
+    const todayBookings = bookings.filter(
+      (booking) => booking.slot.date === today
+    );
     const todayCount = todayBookings.length;
     console.log("Today's booking count:", todayCount);
-    
+
     // Count bookings from the same day last week
-    const lastWeekBookings = bookings.filter(booking => booking.slot.date === lastWeekDate);
+    const lastWeekBookings = bookings.filter(
+      (booking) => booking.slot.date === lastWeekDate
+    );
     const lastWeekCount = lastWeekBookings.length;
     console.log("Last week's booking count on same day:", lastWeekCount);
-    
+
     // Calculate percent change
     let change = 0;
     if (lastWeekCount > 0) {
@@ -389,182 +390,191 @@ export default function HomeContent({venueId}) {
     } else if (todayCount > 0) {
       change = 100;
     }
-    
+
     console.log("Percent change:", change);
     console.log("--- Today's Bookings Calculation End ---");
-    
+
     setTodayBookings({
       count: todayCount,
       change: parseFloat(change.toFixed(1)),
-      comparison: "vs last week"
+      comparison: "vs last week",
     });
   };
 
   const calculateWeeklyRevenue = (bookings) => {
     console.log("--- Weekly Revenue Calculation Start ---");
-    
+
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    const weekAgoString = weekAgo.toISOString().split('T')[0];
-    
+    const weekAgoString = weekAgo.toISOString().split("T")[0];
+
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    const twoWeeksAgoString = twoWeeksAgo.toISOString().split('T')[0];
-    
-    const thisWeekBookings = bookings.filter(booking => {
+    const twoWeeksAgoString = twoWeeksAgo.toISOString().split("T")[0];
+
+    const thisWeekBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.slot.date);
       return bookingDate >= weekAgo;
     });
-    
-    const lastWeekBookings = bookings.filter(booking => {
+
+    const lastWeekBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.slot.date);
       return bookingDate >= twoWeeksAgo && bookingDate < weekAgo;
     });
-    
+
     // Helper function to extract numeric price
     const getNumericPrice = (price) => {
       let numericPrice = 0;
-      
+
       if (price !== null && price !== undefined) {
-        if (typeof price === 'object' && price.hasOwnProperty('value')) {
+        if (typeof price === "object" && price.hasOwnProperty("value")) {
           numericPrice = parseFloat(price.value);
-        } else if (typeof price === 'string') {
-          numericPrice = parseFloat(price.replace(/[^0-9.]/g, ''));
-        } else if (typeof price === 'number') {
+        } else if (typeof price === "string") {
+          numericPrice = parseFloat(price.replace(/[^0-9.]/g, ""));
+        } else if (typeof price === "number") {
           numericPrice = price;
         }
       }
-      
+
       return isNaN(numericPrice) ? 0 : numericPrice;
     };
-    
+
     let thisWeekRevenue = 0;
-    thisWeekBookings.forEach(booking => {
+    thisWeekBookings.forEach((booking) => {
       thisWeekRevenue += getNumericPrice(booking.slot.price);
     });
-    
+
     let lastWeekRevenue = 0;
-    lastWeekBookings.forEach(booking => {
+    lastWeekBookings.forEach((booking) => {
       lastWeekRevenue += getNumericPrice(booking.slot.price);
     });
-    
+
     let change = 0;
     if (lastWeekRevenue > 0) {
       change = ((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100;
     }
-    
+
     console.log("--- Weekly Revenue Calculation End ---");
-    
+
     setWeeklyRevenue({
       weekly: thisWeekRevenue,
       change: parseFloat(change.toFixed(1)),
-      currency: "₹"
+      currency: "₹",
     });
   };
 
   const calculatePopularTimeSlots = (bookings) => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
-    const thisWeekBookings = bookings.filter(booking => {
+
+    const thisWeekBookings = bookings.filter((booking) => {
       const bookingDate = new Date(booking.slot.date);
       return bookingDate >= weekAgo;
     });
-    
+
     const halfHourCounts = {};
     for (let hour = 6; hour < 22; hour++) {
-      for (let minute of ['00', '30']) {
-        const timeKey = `${hour.toString().padStart(2, '0')}:${minute}`;
+      for (let minute of ["00", "30"]) {
+        const timeKey = `${hour.toString().padStart(2, "0")}:${minute}`;
         halfHourCounts[timeKey] = 0;
       }
     }
-    
-    thisWeekBookings.forEach(booking => {
+
+    thisWeekBookings.forEach((booking) => {
       const startTime = booking.slot.start_at;
-      const [hour, minute] = startTime.split(':');
-      const roundedMinute = parseInt(minute) < 30 ? '00' : '30';
+      const [hour, minute] = startTime.split(":");
+      const roundedMinute = parseInt(minute) < 30 ? "00" : "30";
       const timeKey = `${hour}:${roundedMinute}`;
-      
+
       if (halfHourCounts[timeKey] !== undefined) {
         halfHourCounts[timeKey]++;
       }
     });
-    
-    const timeSlotArray = Object.entries(halfHourCounts).map(([time, count]) => {
-      const [hour, minute] = time.split(':');
-      const hourNum = parseInt(hour);
-      const ampm = hourNum < 12 ? 'AM' : 'PM';
-      const hour12 = hourNum % 12 || 12;
-      
-      return {
-        name: `${hour12}:${minute} ${ampm}`,
-        bookings: count,
-        time: time,
-        fill: hourNum < 12 ? '#8884d8' : hourNum < 16 ? '#82ca9d' : '#ffc658'
-      };
-    });
-    
+
+    const timeSlotArray = Object.entries(halfHourCounts).map(
+      ([time, count]) => {
+        const [hour, minute] = time.split(":");
+        const hourNum = parseInt(hour);
+        const ampm = hourNum < 12 ? "AM" : "PM";
+        const hour12 = hourNum % 12 || 12;
+
+        return {
+          name: `${hour12}:${minute} ${ampm}`,
+          bookings: count,
+          time: time,
+          fill: hourNum < 12 ? "#8884d8" : hourNum < 16 ? "#82ca9d" : "#ffc658",
+        };
+      }
+    );
+
     timeSlotArray.sort((a, b) => b.bookings - a.bookings);
     const topTimeSlots = timeSlotArray.slice(0, 12);
     topTimeSlots.sort((a, b) => a.time.localeCompare(b.time));
-    
+
     setPopularTimeSlots(topTimeSlots);
   };
 
   // Helper functions for availability feature
   const formatTime12Hour = (time24) => {
-    const [hours, minutes] = time24.split(':');
+    const [hours, minutes] = time24.split(":");
     const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 || 12;
     return `${hour12}:${minutes} ${ampm}`;
   };
 
   const calculateDuration = (start, end) => {
-    const [startHours, startMinutes] = start.split(':').map(Number);
-    const [endHours, endMinutes] = end.split(':').map(Number);
-    
+    const [startHours, startMinutes] = start.split(":").map(Number);
+    const [endHours, endMinutes] = end.split(":").map(Number);
+
     const totalStartMinutes = startHours * 60 + startMinutes;
     const totalEndMinutes = endHours * 60 + endMinutes;
-    
+
     const durationMinutes = totalEndMinutes - totalStartMinutes;
     const hours = Math.floor(durationMinutes / 60);
     const minutes = durationMinutes % 60;
-    
+
     if (hours > 0 && minutes > 0) {
-      return `${hours}.${minutes === 30 ? '5' : '0'} hours`;
+      return `${hours}.${minutes === 30 ? "5" : "0"} hours`;
     } else if (hours > 0) {
-      return `${hours} hour${hours > 1 ? 's' : ''}`;
+      return `${hours} hour${hours > 1 ? "s" : ""}`;
     } else {
       return `${minutes} mins`;
     }
   };
 
   const generateShareableText = () => {
-    if (availableSlots.length === 0) return '';
+    if (availableSlots.length === 0) return "";
 
     const dateObj = new Date(selectedDate);
-    const formattedDate = dateObj.toLocaleDateString('en-IN', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    const formattedDate = dateObj.toLocaleDateString("en-IN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
 
     let message = `🏟️ *${venueInfo.name} - Slots Available!*\n`;
     message += `📅 ${formattedDate}\n\n`;
 
-    availableSlots.forEach(court => {
-      message += `✅ *${court.courtName}:*\n`;
-      court.slots.forEach(slot => {
-        const duration = calculateDuration(slot.start, slot.end);
-        message += `• ${formatTime12Hour(slot.start)} - ${formatTime12Hour(slot.end)} (${duration})\n`;
-      });
-      message += '\n';
+    availableSlots.forEach((court) => {
+      const availableSlots = court.slots.filter((slot) => !slot.booked);
+      if (availableSlots.length > 0) {
+        message += `✅ *${court.courtName}:*\n`;
+        availableSlots.slice(0, 6).forEach((slot) => {
+          // Limit to 6 slots for sharing
+          const duration = calculateDuration(slot.start_at, slot.end_at);
+          message += `• ${formatTime12Hour(slot.start_at)} - ${formatTime12Hour(
+            slot.end_at
+          )} (${duration}) - ₹${slot.price.toString().replace("₹", "")}\n`;
+        });
+        if (availableSlots.length > 6) {
+          message += `• +${availableSlots.length - 6} more slots available\n`;
+        }
+        message += "\n";
+      }
     });
 
-    // message += `📞 Book Now: ${venueInfo.phone}\n`;
-    // message += `📍 Location: ${venueInfo.address}\n\n`;
     message += `⚡ Hurry! Limited slots available.`;
 
     return message;
@@ -641,7 +651,7 @@ export default function HomeContent({venueId}) {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!user) {
-        router.push('/login');
+        router.push("/login");
       }
     }, 1000);
 
@@ -706,12 +716,14 @@ export default function HomeContent({venueId}) {
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={new Date().toISOString().split("T")[0]}
                 className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <button
                 onClick={refreshAvailability}
-                className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all ${isLoadingAvailability ? 'animate-spin' : ''}`}
+                className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all ${
+                  isLoadingAvailability ? "animate-spin" : ""
+                }`}
               >
                 <RefreshCw className="w-4 h-4" />
               </button>
@@ -719,49 +731,130 @@ export default function HomeContent({venueId}) {
           </div>
 
           {/* Shareable Content Area */}
-                    <div id="availability-card" className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+          <div
+            id="availability-card"
+            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200"
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-xl font-bold text-gray-800">{venueInfo.name}</h3>
+                <h3 className="text-xl font-bold text-gray-800">
+                  {venueInfo.name}
+                </h3>
                 <p className="text-sm text-gray-600">
-                  {new Date(selectedDate).toLocaleDateString('en-IN', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
+                  {new Date(selectedDate).toLocaleDateString("en-IN", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </p>
               </div>
               <div className="text-right">
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Available Now
-                </span>
+                <div className="flex items-center gap-4 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-green-500 rounded"></div>
+                    <span className="text-gray-600">Available</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-3 h-3 bg-red-500 rounded"></div>
+                    <span className="text-gray-600">Booked</span>
+                  </div>
+                </div>
               </div>
             </div>
 
             {availableSlots.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {availableSlots.map((court, index) => (
                   <div key={index} className="bg-white rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-800 mb-2">{court.courtName}</h4>
-                    <div className="grid grid-cols-1 gap-2">
-                      {court.slots.map((slot, slotIndex) => (
-                        <div key={slotIndex} className="flex items-center justify-between bg-green-50 rounded-lg px-3 py-2">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-gray-800">
-                              {formatTime12Hour(slot.start)} - {formatTime12Hour(slot.end)}
-                            </span>
-                            <span className="text-xs text-gray-600">
-                              ({calculateDuration(slot.start, slot.end)})
-                            </span>
+                    <h4 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                      <Activity className="w-4 h-4 text-blue-600" />
+                      {court.courtName}
+                    </h4>
+
+                    {/* Slots Grid - 4 columns for better visibility */}
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto">
+                      {court.slots.slice(0, 12).map((slot, slotIndex) => (
+                        <div
+                          key={slotIndex}
+                          className={`relative rounded-lg p-3 border-2 transition-all duration-200 ${
+                            slot.booked
+                              ? "bg-red-50 border-red-200 opacity-75"
+                              : "bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer"
+                          }`}
+                        >
+                          {/* Status indicator */}
+                          <div
+                            className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
+                              slot.booked ? "bg-red-500" : "bg-green-500"
+                            }`}
+                          ></div>
+
+                          {/* Time display */}
+                          <div className="mb-2">
+                            <div className="text-sm font-medium text-gray-800">
+                              {formatTime12Hour(slot.start_at)}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              to {formatTime12Hour(slot.end_at)}
+                            </div>
                           </div>
-                          <span className="text-sm font-semibold text-green-700">
-                            ₹{slot.price.slice(1)}
-                          </span>
+
+                          {/* Duration */}
+                          <div className="text-xs text-gray-500 mb-1">
+                            {calculateDuration(slot.start_at, slot.end_at)}
+                          </div>
+
+                          {/* Price */}
+                          <div
+                            className={`text-sm font-semibold ${
+                              slot.booked ? "text-red-600" : "text-green-700"
+                            }`}
+                          >
+                            ₹{slot.price.toString().replace("₹", "")}
+                          </div>
+
+                          {/* Booked overlay */}
+                          {slot.booked && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-red-500 bg-opacity-10 rounded-lg">
+                              <span className="text-xs font-medium text-red-600 bg-white px-2 py-1 rounded shadow-sm">
+                                BOOKED
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))}
+                    </div>
+
+                    {/* Show more slots indicator if there are more than 12 */}
+                    {court.slots.length > 12 && (
+                      <div className="mt-3 text-center">
+                        <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                          +{court.slots.length - 12} more slots available
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Summary for this court */}
+                    <div className="mt-4 pt-3 border-t border-gray-200 flex justify-between text-sm">
+                      <span className="text-gray-600">
+                        Available:{" "}
+                        <span className="font-medium text-green-600">
+                          {court.slots.filter((slot) => !slot.booked).length}
+                        </span>
+                      </span>
+                      <span className="text-gray-600">
+                        Booked:{" "}
+                        <span className="font-medium text-red-600">
+                          {court.slots.filter((slot) => slot.booked).length}
+                        </span>
+                      </span>
+                      <span className="text-gray-600">
+                        Total:{" "}
+                        <span className="font-medium text-blue-600">
+                          {court.slots.length}
+                        </span>
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -769,20 +862,55 @@ export default function HomeContent({venueId}) {
             ) : (
               <div className="text-center py-8">
                 <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-600">No available slots for the selected date</p>
+                <p className="text-gray-600">
+                  No slots found for the selected date
+                </p>
               </div>
             )}
 
+            {/* Overall summary */}
             {availableSlots.length > 0 && (
               <div className="mt-6 pt-4 border-t border-blue-200">
-                <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="bg-green-100 rounded-lg p-3">
+                    <div className="text-lg font-bold text-green-700">
+                      {availableSlots.reduce(
+                        (total, court) =>
+                          total +
+                          court.slots.filter((slot) => !slot.booked).length,
+                        0
+                      )}
+                    </div>
+                    <div className="text-xs text-green-600">
+                      Available Slots
+                    </div>
+                  </div>
+                  <div className="bg-red-100 rounded-lg p-3">
+                    <div className="text-lg font-bold text-red-700">
+                      {availableSlots.reduce(
+                        (total, court) =>
+                          total +
+                          court.slots.filter((slot) => slot.booked).length,
+                        0
+                      )}
+                    </div>
+                    <div className="text-xs text-red-600">Booked Slots</div>
+                  </div>
+                  <div className="bg-blue-100 rounded-lg p-3">
+                    <div className="text-lg font-bold text-blue-700">
+                      {availableSlots.reduce(
+                        (total, court) => total + court.slots.length,
+                        0
+                      )}
+                    </div>
+                    <div className="text-xs text-blue-600">Total Slots</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <Phone className="w-4 h-4 text-gray-500" />
                     <span>Book Now: {user.phoneNumber}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    {/* <MapPin className="w-4 h-4 text-gray-500" /> */}
-                    {/* <span>{venueInfo.address}</span> */}
                   </div>
                 </div>
               </div>
@@ -795,9 +923,9 @@ export default function HomeContent({venueId}) {
               <button
                 onClick={copyToClipboard}
                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
-                  copied 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                  copied
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-100 hover:bg-gray-200 text-gray-700"
                 }`}
               >
                 {copied ? (
@@ -812,20 +940,33 @@ export default function HomeContent({venueId}) {
                   </>
                 )}
               </button>
-              
+
               <button
                 onClick={() => {
-                  // Using html2canvas to capture the element
-                  const element = document.getElementById('availability-card');
-                  if (window.html2canvas) {
-                    window.html2canvas(element).then(canvas => {
-                      const link = document.createElement('a');
-                      link.download = `${venueInfo.name}_availability_${selectedDate}.png`;
-                      link.href = canvas.toDataURL();
-                      link.click();
-                    });
-                  } else {
-                    alert('Please install html2canvas library: npm install html2canvas');
+                  const element = document.getElementById("availability-card");
+                  if (element) {
+                    html2canvas(element, {
+                      backgroundColor: "#ffffff",
+                      scale: 2, // Higher quality
+                      logging: false,
+                      useCORS: true,
+                      allowTaint: true,
+                    })
+                      .then((canvas) => {
+                        const link = document.createElement("a");
+                        link.download = `${venueInfo.name.replace(
+                          /[^a-zA-Z0-9]/g,
+                          "_"
+                        )}_availability_${selectedDate}.png`;
+                        link.href = canvas.toDataURL("image/png", 1.0);
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                      })
+                      .catch((error) => {
+                        console.error("Error generating image:", error);
+                        alert("Failed to generate image. Please try again.");
+                      });
                   }
                 }}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
@@ -877,7 +1018,9 @@ export default function HomeContent({venueId}) {
 
         {/* Sport Distribution */}
         <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Sport Distribution</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
+            Sport Distribution
+          </h2>
           {sportDistribution.length > 0 ? (
             <div className="space-y-4">
               {sportDistribution.map((item) => (
@@ -901,7 +1044,9 @@ export default function HomeContent({venueId}) {
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No sports data available</p>
+            <p className="text-gray-500 text-center py-4">
+              No sports data available
+            </p>
           )}
         </div>
       </div>
