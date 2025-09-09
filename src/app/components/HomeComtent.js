@@ -791,11 +791,11 @@ export default function HomeContent({ venueId }) {
 
       {/* Availability Share Widget */}
       <div className="bg-white rounded-lg shadow mb-6">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Share2 className="w-5 h-5 text-blue-500" />
-              Share Today's Availability
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+              <Share2 className="w-4 h-4 text-blue-500" />
+              Share Availability
             </h2>
             <div className="flex items-center gap-2">
               <input
@@ -803,346 +803,201 @@ export default function HomeContent({ venueId }) {
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
               />
               <button
                 onClick={refreshAvailability}
-                className={`p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-all ${
+                className={`p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-all ${
                   isLoadingAvailability ? "animate-spin" : ""
                 }`}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-3 h-3" />
               </button>
             </div>
           </div>
 
-          {/* Shareable Content Area */}
+          {/* Compact Shareable Card */}
           <div
             id="availability-card"
-            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200"
+            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200"
           >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                {/* Playnue Logo/Bookmark */}
-                <div className="bg-white rounded-lg p-2 shadow-lg border border-gray-200">
+            {/* Compact Header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-white rounded p-1.5 shadow-sm">
                   <img
-                    src="/logo.png"
+                    src="/images/playnue-logo.png"
                     alt="Playnue"
-                    className="h-8 w-auto object-contain"
+                    className="h-5 w-auto object-contain"
                   />
                 </div>
-
-                {/* Venue Info */}
                 <div>
-                  <h3 className="text-xl font-bold text-gray-800">
+                  <h3 className="text-lg font-bold text-gray-800">
                     {venueInfo.name}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs text-gray-600">
                     {new Date(selectedDate).toLocaleDateString("en-IN", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
+                      weekday: "short",
+                      month: "short",
                       day: "numeric",
                     })}
                   </p>
                 </div>
               </div>
-
-              <div className="text-right">
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-green-500 rounded"></div>
-                    <span className="text-gray-600">Available</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 bg-red-500 rounded"></div>
-                    <span className="text-gray-600">Booked</span>
-                  </div>
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded"></div>
+                  <span className="text-gray-600">Available</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-red-500 rounded"></div>
+                  <span className="text-gray-600">Booked</span>
                 </div>
               </div>
             </div>
 
-            {/* Enhanced Filters and Controls */}
-            <div className="bg-white rounded-lg p-4 mb-6 shadow-sm">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Court Filter */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Court
-                  </label>
-                  <select
-                    value={selectedCourt}
-                    onChange={(e) =>
-                      handleFilterChange("court", e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Courts</option>
-                    {getUniqueCourtNames().map((court) => (
-                      <option key={court} value={court}>
-                        {court}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            {/* Compact Filters */}
+            <div className="bg-white rounded p-3 mb-4 shadow-sm">
+              <div className="grid grid-cols-3 gap-3">
+                <select
+                  value={selectedCourt}
+                  onChange={(e) => handleFilterChange("court", e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">All Courts</option>
+                  {getUniqueCourtNames().map((court) => (
+                    <option key={court} value={court}>
+                      {court}
+                    </option>
+                  ))}
+                </select>
 
-                {/* Status Filter */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={filterStatus}
-                    onChange={(e) =>
-                      handleFilterChange("status", e.target.value)
-                    }
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="all">All Slots</option>
-                    <option value="available">Available Only</option>
-                    <option value="booked">Booked Only</option>
-                  </select>
-                </div>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="all">All</option>
+                  <option value="available">Available</option>
+                  <option value="booked">Booked</option>
+                </select>
 
-                {/* Sort By */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Sort By
-                  </label>
-                  <select
-                    value={sortBy}
-                    onChange={(e) => handleFilterChange("sort", e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="time">Time</option>
-                    <option value="price">Price</option>
-                    <option value="duration">Duration</option>
-                  </select>
-                </div>
-
-                {/* Quick Stats */}
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    Quick Stats
-                  </label>
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded">
-                      {
-                        getFilteredAndSortedSlots().filter(
-                          (slot) => !slot.booked
-                        ).length
-                      }{" "}
-                      Available
-                    </span>
-                    <span className="bg-red-100 text-red-700 px-2 py-1 rounded">
-                      {
-                        getFilteredAndSortedSlots().filter(
-                          (slot) => slot.booked
-                        ).length
-                      }{" "}
-                      Booked
-                    </span>
-                  </div>
-                </div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => handleFilterChange("sort", e.target.value)}
+                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="time">Time</option>
+                  <option value="price">Price</option>
+                  <option value="duration">Duration</option>
+                </select>
               </div>
             </div>
 
             {availableSlots.length > 0 ? (
               <div>
-                {/* Enhanced Slots Grid */}
-                <div className="bg-white rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-semibold text-gray-800">
-                      Showing {getPaginatedSlots().length} of{" "}
-                      {getFilteredAndSortedSlots().length} slots
-                    </h4>
-                    <div className="text-sm text-gray-600">
-                      Page {currentPage} of {getTotalPages()}
-                    </div>
-                  </div>
-
-                  {/* Compact Slots Grid */}
-                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                    {getPaginatedSlots().map((slot, index) => (
-                      <div
-                        key={`${slot.courtName}-${slot.start_at}-${index}`}
-                        className={`relative rounded-lg p-3 border transition-all duration-200 ${
-                          slot.booked
-                            ? "bg-red-50 border-red-200"
-                            : "bg-green-50 border-green-200 hover:bg-green-100 cursor-pointer"
-                        }`}
-                      >
-                        {/* Simple Status indicator */}
+                {/* More Compact Slots Grid */}
+                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-3">
+                  {getPaginatedSlots()
+                    .slice(0, 16)
+                    .map(
+                      (
+                        slot,
+                        index // Limit to 16 slots
+                      ) => (
                         <div
-                          className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
-                            slot.booked ? "bg-red-500" : "bg-green-500"
-                          }`}
-                        ></div>
-
-                        {/* Court name */}
-                        <div className="text-xs font-medium text-blue-600 mb-1 pr-4">
-                          {slot.courtName}
-                        </div>
-
-                        {/* Time display - Compact */}
-                        <div className="mb-2">
-                          <div className="text-sm font-bold text-gray-800">
-                            {formatTime12Hour(slot.start_at)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {formatTime12Hour(slot.end_at)}
-                          </div>
-                        </div>
-
-                        {/* Duration */}
-                        {/* <div className="text-xs text-gray-500 mb-1">
-                          {calculateDuration(slot.start_at, slot.end_at)}
-                        </div> */}
-
-                        {/* Price - Compact */}
-                        <div
-                          className={`text-sm font-bold ${
-                            slot.booked ? "text-red-600" : "text-green-700"
+                          key={`${slot.courtName}-${slot.start_at}-${index}`}
+                          className={`relative rounded p-2 border text-center ${
+                            slot.booked
+                              ? "bg-red-50 border-red-200"
+                              : "bg-green-50 border-green-200"
                           }`}
                         >
-                          {formatPrice(slot.price.slice(1))}
-                        </div>
+                          <div
+                            className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
+                              slot.booked ? "bg-red-500" : "bg-green-500"
+                            }`}
+                          ></div>
 
-                        {/* Simple Booked overlay */}
-                        {slot.booked && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-red-100 bg-opacity-60 rounded-lg">
-                            <span className="text-xs font-bold text-red-600">
-                              BOOKED
-                            </span>
+                          <div className="text-xs font-medium text-blue-600 mb-1 pr-2">
+                            {slot.courtName.substring(0, 6)}
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* No slots message */}
-                  {getPaginatedSlots().length === 0 && (
-                    <div className="text-center py-12">
-                      <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-600 text-lg">No slots found</p>
-                      <p className="text-gray-500 text-sm">
-                        Try adjusting your filters
-                      </p>
-                    </div>
-                  )}
+                          <div className="text-xs font-bold text-gray-800">
+                            {formatTime12Hour(slot.start_at)}
+                          </div>
+
+                          <div
+                            className={`text-xs font-bold ${
+                              slot.booked ? "text-red-600" : "text-green-700"
+                            }`}
+                          >
+                            {formatPrice(slot.price.slice(1))}
+                          </div>
+
+                          {slot.booked && (
+                            <div className="absolute inset-0 flex items-center justify-center bg-red-100 bg-opacity-60 rounded">
+                              <span className="text-xs font-bold text-red-600">
+                                BOOKED
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    )}
                 </div>
 
-                {/* Enhanced Pagination */}
+                {/* Simple Pagination */}
                 {getTotalPages() > 1 && (
-                  <div className="flex items-center justify-between bg-white rounded-lg p-4">
-                    <div className="text-sm text-gray-600">
-                      Showing {(currentPage - 1) * slotsPerPage + 1} to{" "}
-                      {Math.min(
-                        currentPage * slotsPerPage,
-                        getFilteredAndSortedSlots().length
-                      )}{" "}
-                      of {getFilteredAndSortedSlots().length} results
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() =>
-                          setCurrentPage(Math.max(1, currentPage - 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Previous
-                      </button>
-
-                      {/* Page numbers */}
-                      <div className="flex items-center gap-1">
-                        {Array.from(
-                          { length: Math.min(5, getTotalPages()) },
-                          (_, i) => {
-                            let pageNum;
-                            if (getTotalPages() <= 5) {
-                              pageNum = i + 1;
-                            } else if (currentPage <= 3) {
-                              pageNum = i + 1;
-                            } else if (currentPage >= getTotalPages() - 2) {
-                              pageNum = getTotalPages() - 4 + i;
-                            } else {
-                              pageNum = currentPage - 2 + i;
-                            }
-
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => setCurrentPage(pageNum)}
-                                className={`w-10 h-10 text-sm rounded-lg transition-colors ${
-                                  currentPage === pageNum
-                                    ? "bg-blue-600 text-white"
-                                    : "border border-gray-300 hover:bg-gray-50"
-                                }`}
-                              >
-                                {pageNum}
-                              </button>
-                            );
-                          }
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          setCurrentPage(
-                            Math.min(getTotalPages(), currentPage + 1)
-                          )
-                        }
-                        disabled={currentPage === getTotalPages()}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                      >
-                        Next
-                      </button>
-                    </div>
+                  <div className="flex items-center justify-center gap-2 mb-3">
+                    <button
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="px-2 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      ‹
+                    </button>
+                    <span className="text-xs text-gray-600">
+                      {currentPage} of {getTotalPages()}
+                    </span>
+                    <button
+                      onClick={() =>
+                        setCurrentPage(
+                          Math.min(getTotalPages(), currentPage + 1)
+                        )
+                      }
+                      disabled={currentPage === getTotalPages()}
+                      className="px-2 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-50"
+                    >
+                      ›
+                    </button>
                   </div>
                 )}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 text-lg">
-                  No slots found for the selected date
-                </p>
-                <button
-                  onClick={refreshAvailability}
-                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Refresh Availability
-                </button>
-              </div>
-            )}
 
-            {/* Enhanced Overall Summary */}
-            {availableSlots.length > 0 && (
-              <div className="mt-6 pt-6 border-t border-blue-200">
-                {/* Summary Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                    <div className="text-2xl font-bold text-green-600">
+                {/* Compact Summary */}
+                <div className="grid grid-cols-4 gap-2 mb-3">
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-sm font-bold text-green-600">
                       {getAllSlots().filter((slot) => !slot.booked).length}
                     </div>
-                    <div className="text-xs text-gray-600">Available Slots</div>
+                    <div className="text-xs text-gray-600">Available</div>
                   </div>
-                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                    <div className="text-2xl font-bold text-red-600">
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-sm font-bold text-red-600">
                       {getAllSlots().filter((slot) => slot.booked).length}
                     </div>
-                    <div className="text-xs text-gray-600">Booked Slots</div>
+                    <div className="text-xs text-gray-600">Booked</div>
                   </div>
-                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                    <div className="text-2xl font-bold text-blue-600">
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-sm font-bold text-blue-600">
                       {getAllSlots().length}
                     </div>
-                    <div className="text-xs text-gray-600">Total Slots</div>
+                    <div className="text-xs text-gray-600">Total</div>
                   </div>
-                  <div className="bg-white rounded-lg p-4 text-center shadow-sm">
-                    <div className="text-2xl font-bold text-purple-600">
+                  <div className="bg-white rounded p-2 text-center">
+                    <div className="text-sm font-bold text-purple-600">
                       {Math.round(
                         (getAllSlots().filter((slot) => !slot.booked).length /
                           getAllSlots().length) *
@@ -1150,26 +1005,24 @@ export default function HomeContent({ venueId }) {
                       )}
                       %
                     </div>
-                    <div className="text-xs text-gray-600">Availability</div>
+                    <div className="text-xs text-gray-600">Available</div>
                   </div>
                 </div>
-
-                <div className="bg-white rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-sm text-gray-700">
-                    <Phone className="w-4 h-4 text-gray-500" />
-                    <span>Book Now: {user.phoneNumber}</span>
-                  </div>
-                </div>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-600 text-sm">No slots found</p>
               </div>
             )}
           </div>
 
-          {/* Action Buttons */}
+          {/* Compact Action Buttons */}
           {availableSlots.length > 0 && (
-            <div className="mt-4 flex items-center gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-2">
               <button
                 onClick={copyToClipboard}
-                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all ${
+                className={`flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium transition-all ${
                   copied
                     ? "bg-green-500 text-white"
                     : "bg-gray-100 hover:bg-gray-200 text-gray-700"
@@ -1177,13 +1030,13 @@ export default function HomeContent({ venueId }) {
               >
                 {copied ? (
                   <>
-                    <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-3 h-3" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="w-4 h-4" />
-                    Copy Message
+                    <Copy className="w-3 h-3" />
+                    Copy
                   </>
                 )}
               </button>
@@ -1194,7 +1047,7 @@ export default function HomeContent({ venueId }) {
                   if (element) {
                     html2canvas(element, {
                       backgroundColor: "#ffffff",
-                      scale: 2, // Higher quality
+                      scale: 2,
                       logging: false,
                       useCORS: true,
                       allowTaint: true,
@@ -1216,10 +1069,10 @@ export default function HomeContent({ venueId }) {
                       });
                   }
                 }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
               >
-                <Download className="w-4 h-4" />
-                Download Image
+                <Download className="w-3 h-3" />
+                Download
               </button>
             </div>
           )}
