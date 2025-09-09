@@ -790,6 +790,9 @@ export default function HomeContent({ venueId }) {
       </div>
 
       {/* Availability Share Widget */}
+      {/* // Replace the entire "Availability Share Widget" section with this more compact version: */}
+
+      {/* Compact Availability Share Widget */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -816,150 +819,129 @@ export default function HomeContent({ venueId }) {
             </div>
           </div>
 
-          {/* Compact Shareable Card */}
+          {/* Simple Shareable Card - matching your screenshot style */}
           <div
             id="availability-card"
             className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200"
           >
-            {/* Compact Header */}
+            {/* Header matching screenshot */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <div className="bg-white rounded p-1.5 shadow-sm">
-                  <img
-                    src="/logo.png"
-                    alt="Playnue"
-                    className="h-5 w-auto object-contain"
-                  />
-                </div>
+                <img
+                  src="/logo.png"
+                  alt="Playnue"
+                  className="h-6 w-auto"
+                />
                 <div>
-                  <h3 className="text-lg font-bold text-gray-800">
+                  <h3 className="text-xl font-bold text-gray-900">
                     {venueInfo.name}
                   </h3>
-                  <p className="text-xs text-gray-600">
+                  <p className="text-sm text-gray-600">
                     {new Date(selectedDate).toLocaleDateString("en-IN", {
                       weekday: "short",
-                      month: "short",
                       day: "numeric",
+                      month: "short",
                     })}
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-3 text-xs">
+              <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded"></div>
-                  <span className="text-gray-600">Available</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Available</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-red-500 rounded"></div>
-                  <span className="text-gray-600">Booked</span>
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-gray-700">Booked</span>
                 </div>
               </div>
             </div>
 
-            {/* Compact Filters */}
-            <div className="bg-white rounded p-3 mb-4 shadow-sm">
-              <div className="grid grid-cols-3 gap-3">
-                <select
-                  value={selectedCourt}
-                  onChange={(e) => handleFilterChange("court", e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="all">All Courts</option>
-                  {getUniqueCourtNames().map((court) => (
-                    <option key={court} value={court}>
-                      {court}
-                    </option>
-                  ))}
-                </select>
+            {/* Inline Filters - single row like screenshot */}
+            <div className="flex items-center gap-4 mb-4">
+              <select
+                value={selectedCourt}
+                onChange={(e) => handleFilterChange("court", e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All Courts</option>
+                {getUniqueCourtNames().map((court) => (
+                  <option key={court} value={court}>
+                    {court}
+                  </option>
+                ))}
+              </select>
 
-                <select
-                  value={filterStatus}
-                  onChange={(e) => handleFilterChange("status", e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="all">All</option>
-                  <option value="available">Available</option>
-                  <option value="booked">Booked</option>
-                </select>
+              <select
+                value={filterStatus}
+                onChange={(e) => handleFilterChange("status", e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="all">All</option>
+                <option value="available">Available</option>
+                <option value="booked">Booked</option>
+              </select>
 
-                <select
-                  value={sortBy}
-                  onChange={(e) => handleFilterChange("sort", e.target.value)}
-                  className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="time">Time</option>
-                  <option value="price">Price</option>
-                  <option value="duration">Duration</option>
-                </select>
-              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => handleFilterChange("sort", e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="time">Time</option>
+                <option value="price">Price</option>
+                <option value="duration">Duration</option>
+              </select>
             </div>
 
             {availableSlots.length > 0 ? (
               <div>
-                {/* More Compact Slots Grid */}
-                <div className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 mb-3">
+                {/* Clean slots grid matching screenshot */}
+                <div className="grid grid-cols-8 gap-3 mb-4">
                   {getPaginatedSlots()
                     .slice(0, 16)
-                    .map(
-                      (
-                        slot,
-                        index // Limit to 16 slots
-                      ) => (
+                    .map((slot, index) => (
+                      <div
+                        key={`${slot.courtName}-${slot.start_at}-${index}`}
+                        className={`relative rounded-lg p-3 border-2 text-center ${
+                          slot.booked
+                            ? "bg-red-50 border-red-200"
+                            : "bg-green-50 border-green-200"
+                        }`}
+                      >
                         <div
-                          key={`${slot.courtName}-${slot.start_at}-${index}`}
-                          className={`relative rounded p-2 border text-center ${
-                            slot.booked
-                              ? "bg-red-50 border-red-200"
-                              : "bg-green-50 border-green-200"
+                          className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
+                            slot.booked ? "bg-red-500" : "bg-green-500"
                           }`}
-                        >
-                          <div
-                            className={`absolute top-1 right-1 w-1.5 h-1.5 rounded-full ${
-                              slot.booked ? "bg-red-500" : "bg-green-500"
-                            }`}
-                          ></div>
+                        ></div>
 
-                          <div className="text-xs font-medium text-blue-600 mb-1 pr-2">
-                            {slot.courtName.substring(0, 6)}
-                          </div>
-
-                          <div className="text-xs font-bold text-gray-800">
-                            {formatTime12Hour(slot.start_at)}
-                          </div>
-
-                          <div
-                            className={`text-xs font-bold ${
-                              slot.booked ? "text-red-600" : "text-green-700"
-                            }`}
-                          >
-                            {formatPrice(slot.price.slice(1))}
-                          </div>
-
-                          {slot.booked && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-red-100 bg-opacity-60 rounded">
-                              <span className="text-xs font-bold text-red-600">
-                                BOOKED
-                              </span>
-                            </div>
-                          )}
+                        <div className="text-xs font-semibold text-blue-700 mb-1">
+                          {slot.courtName}
                         </div>
-                      )
-                    )}
+
+                        <div className="text-sm font-bold text-gray-900 mb-1">
+                          {formatTime12Hour(slot.start_at)}
+                        </div>
+
+                        <div className="text-sm font-bold text-green-700">
+                          {formatPrice(slot.price.slice(1))}
+                        </div>
+                      </div>
+                    ))}
                 </div>
 
-                {/* Simple Pagination */}
+                {/* Simple pagination */}
                 {getTotalPages() > 1 && (
-                  <div className="flex items-center justify-center gap-2 mb-3">
+                  <div className="flex items-center justify-center gap-2 mb-4">
                     <button
                       onClick={() =>
                         setCurrentPage(Math.max(1, currentPage - 1))
                       }
                       disabled={currentPage === 1}
-                      className="px-2 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-50"
+                      className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50"
                     >
                       ‹
                     </button>
-                    <span className="text-xs text-gray-600">
+                    <span className="text-sm text-gray-600">
                       {currentPage} of {getTotalPages()}
                     </span>
                     <button
@@ -969,35 +951,35 @@ export default function HomeContent({ venueId }) {
                         )
                       }
                       disabled={currentPage === getTotalPages()}
-                      className="px-2 py-1 text-xs border rounded hover:bg-gray-50 disabled:opacity-50"
+                      className="px-3 py-1 text-sm border rounded hover:bg-gray-50 disabled:opacity-50"
                     >
                       ›
                     </button>
                   </div>
                 )}
 
-                {/* Compact Summary */}
-                <div className="grid grid-cols-4 gap-2 mb-3">
-                  <div className="bg-white rounded p-2 text-center">
-                    <div className="text-sm font-bold text-green-600">
+                {/* Stats row matching screenshot */}
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">
                       {getAllSlots().filter((slot) => !slot.booked).length}
                     </div>
-                    <div className="text-xs text-gray-600">Available</div>
+                    <div className="text-sm text-gray-600">Available</div>
                   </div>
-                  <div className="bg-white rounded p-2 text-center">
-                    <div className="text-sm font-bold text-red-600">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">
                       {getAllSlots().filter((slot) => slot.booked).length}
                     </div>
-                    <div className="text-xs text-gray-600">Booked</div>
+                    <div className="text-sm text-gray-600">Booked</div>
                   </div>
-                  <div className="bg-white rounded p-2 text-center">
-                    <div className="text-sm font-bold text-blue-600">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">
                       {getAllSlots().length}
                     </div>
-                    <div className="text-xs text-gray-600">Total</div>
+                    <div className="text-sm text-gray-600">Total</div>
                   </div>
-                  <div className="bg-white rounded p-2 text-center">
-                    <div className="text-sm font-bold text-purple-600">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
                       {Math.round(
                         (getAllSlots().filter((slot) => !slot.booked).length /
                           getAllSlots().length) *
@@ -1005,24 +987,26 @@ export default function HomeContent({ venueId }) {
                       )}
                       %
                     </div>
-                    <div className="text-xs text-gray-600">Available</div>
+                    <div className="text-sm text-gray-600">Available</div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center py-6">
-                <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-600 text-sm">No slots found</p>
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">
+                  No slots found for selected date
+                </p>
               </div>
             )}
           </div>
 
-          {/* Compact Action Buttons */}
+          {/* Action buttons matching screenshot */}
           {availableSlots.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-3">
               <button
                 onClick={copyToClipboard}
-                className={`flex items-center justify-center gap-2 px-3 py-2 rounded text-sm font-medium transition-all ${
+                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium ${
                   copied
                     ? "bg-green-500 text-white"
                     : "bg-gray-100 hover:bg-gray-200 text-gray-700"
@@ -1030,12 +1014,12 @@ export default function HomeContent({ venueId }) {
               >
                 {copied ? (
                   <>
-                    <CheckCircle className="w-3 h-3" />
+                    <CheckCircle className="w-4 h-4" />
                     Copied!
                   </>
                 ) : (
                   <>
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-4 h-4" />
                     Copy
                   </>
                 )}
@@ -1069,9 +1053,9 @@ export default function HomeContent({ venueId }) {
                       });
                   }
                 }}
-                className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
               >
-                <Download className="w-3 h-3" />
+                <Download className="w-4 h-4" />
                 Download
               </button>
             </div>
