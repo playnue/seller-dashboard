@@ -824,12 +824,12 @@ export default function HomeContent({ venueId }) {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 {/* Playnue Logo/Bookmark */}
-                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-2 shadow-lg">
-                  <div className="bg-white rounded px-3 py-1">
-                    <span className="font-bold text-orange-600 text-lg">
-                      PLAYNUE
-                    </span>
-                  </div>
+                <div className="bg-white rounded-lg p-2 shadow-lg border border-gray-200">
+                  <img
+                    src="/logo.png"
+                    alt="Playnue"
+                    className="h-8 w-auto object-contain"
+                  />
                 </div>
 
                 {/* Venue Info */}
