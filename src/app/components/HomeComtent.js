@@ -822,19 +822,32 @@ export default function HomeContent({ venueId }) {
             className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200"
           >
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-xl font-bold text-gray-800">
-                  {venueInfo.name}
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {new Date(selectedDate).toLocaleDateString("en-IN", {
-                    weekday: "long",
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })}
-                </p>
+              <div className="flex items-center gap-4">
+                {/* Playnue Logo/Bookmark */}
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg p-2 shadow-lg">
+                  <div className="bg-white rounded px-3 py-1">
+                    <span className="font-bold text-orange-600 text-lg">
+                      PLAYNUE
+                    </span>
+                  </div>
+                </div>
+
+                {/* Venue Info */}
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800">
+                    {venueInfo.name}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {new Date(selectedDate).toLocaleDateString("en-IN", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
               </div>
+
               <div className="text-right">
                 <div className="flex items-center gap-4 text-xs">
                   <div className="flex items-center gap-1">
@@ -982,9 +995,9 @@ export default function HomeContent({ venueId }) {
                         </div>
 
                         {/* Duration */}
-                        <div className="text-xs text-gray-500 mb-1">
+                        {/* <div className="text-xs text-gray-500 mb-1">
                           {calculateDuration(slot.start_at, slot.end_at)}
-                        </div>
+                        </div> */}
 
                         {/* Price - Compact */}
                         <div
