@@ -826,7 +826,7 @@ export default function HomeContent({ venueId }) {
               <div className="flex items-center gap-3">
                 <div className="bg-white rounded p-1.5 shadow-sm">
                   <img
-                    src="/images/playnue-logo.png"
+                    src="/logo.png"
                     alt="Playnue"
                     className="h-5 w-auto object-contain"
                   />
