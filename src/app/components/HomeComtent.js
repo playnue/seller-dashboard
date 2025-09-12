@@ -527,6 +527,14 @@ export default function HomeContent({ venueId }) {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
+  const copyToClipboard = () => {
+    const text = generateShareableText();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const calculateDuration = (start, end) => {
     const [startHours, startMinutes] = start.split(":").map(Number);
     const [endHours, endMinutes] = end.split(":").map(Number);
@@ -548,7 +556,10 @@ export default function HomeContent({ venueId }) {
   };
 
   const generateShareableText = () => {
-    if (availableSlots.length === 0) return "";
+    // Get only the slots that are currently displayed (paginated)
+    const currentlyDisplayedSlots = getPaginatedSlots().slice(0, 16);
+
+    if (currentlyDisplayedSlots.length === 0) return "";
 
     const dateObj = new Date(selectedDate);
     const formattedDate = dateObj.toLocaleDateString("en-IN", {
@@ -558,38 +569,56 @@ export default function HomeContent({ venueId }) {
       day: "numeric",
     });
 
-    let message = `🏟️ *${venueInfo.name} - Slots Available!*\n`;
-    message += `📅 ${formattedDate}\n\n`;
+    let message = `${venueInfo.name} - Available Slots\n`;
+    message += `${formattedDate}\n\n`;
 
-    availableSlots.forEach((court) => {
-      const availableSlots = court.slots.filter((slot) => !slot.booked);
-      if (availableSlots.length > 0) {
-        message += `✅ *${court.courtName}:*\n`;
-        availableSlots.slice(0, 6).forEach((slot) => {
-          // Limit to 6 slots for sharing
+    // Group slots by court name for better organization
+    const slotsByCourt = {};
+    currentlyDisplayedSlots.forEach((slot) => {
+      if (!slot.booked) {
+        // Only include available slots
+        if (!slotsByCourt[slot.courtName]) {
+          slotsByCourt[slot.courtName] = [];
+        }
+        slotsByCourt[slot.courtName].push(slot);
+      }
+    });
+
+    // Generate text for each court
+    Object.keys(slotsByCourt).forEach((courtName) => {
+      const courtSlots = slotsByCourt[courtName];
+      if (courtSlots.length > 0) {
+        message += `${courtName}:\n`;
+        courtSlots.forEach((slot) => {
           const duration = calculateDuration(slot.start_at, slot.end_at);
+          // Clean price by removing currency symbols and extra characters
+          const cleanPrice = slot.price.replace(/[₹$,]/g, "").trim();
           message += `• ${formatTime12Hour(slot.start_at)} - ${formatTime12Hour(
             slot.end_at
-          )} (${duration}) - ₹${slot.price.toString().replace("₹", "")}\n`;
+          )} (${duration}) - Rs.${cleanPrice}\n`;
         });
-        if (availableSlots.length > 6) {
-          message += `• +${availableSlots.length - 6} more slots available\n`;
-        }
         message += "\n";
       }
     });
 
-    message += `⚡ Hurry! Limited slots available.`;
+    // Add summary stats
+    const availableCount = currentlyDisplayedSlots.filter(
+      (slot) => !slot.booked
+    ).length;
+    const totalDisplayed = currentlyDisplayedSlots.length;
+
+    if (availableCount > 0) {
+      message += `Available: ${availableCount}/${totalDisplayed} slots shown`;
+
+      // Add note about pagination if there are more pages
+      if (getTotalPages() > 1) {
+        message += ` (Page ${currentPage} of ${getTotalPages()})`;
+      }
+    } else {
+      message += "All displayed slots are currently booked.";
+    }
 
     return message;
-  };
-
-  const copyToClipboard = () => {
-    const text = generateShareableText();
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
   };
 
   const refreshAvailability = () => {
@@ -795,18 +824,18 @@ export default function HomeContent({ venueId }) {
       {/* Compact Availability Share Widget */}
       <div className="bg-white rounded-lg shadow mb-6">
         <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
             <h2 className="text-md font-semibold text-gray-900 flex items-center gap-2">
               <Share2 className="w-4 h-4 text-blue-500" />
               Share Availability
             </h2>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-start sm:self-auto">
               <input
                 type="date"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 min={new Date().toISOString().split("T")[0]}
-                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
+                className="px-2 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 flex-1 sm:flex-none"
               />
               <button
                 onClick={refreshAvailability}
@@ -819,21 +848,17 @@ export default function HomeContent({ venueId }) {
             </div>
           </div>
 
-          {/* Simple Shareable Card - matching your screenshot style */}
+          {/* Responsive Shareable Card */}
           <div
             id="availability-card"
-            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200"
+            className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-200"
           >
-            {/* Header matching screenshot */}
-            <div className="flex items-center justify-between mb-4">
+            {/* Responsive Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-3">
-                <img
-                  src="/logo.png"
-                  alt="Playnue"
-                  className="h-6 w-auto"
-                />
+                <img src="/logo.png" alt="Playnue" className="h-6 w-auto" />
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900">
                     {venueInfo.name}
                   </h3>
                   <p className="text-sm text-gray-600">
@@ -845,7 +870,7 @@ export default function HomeContent({ venueId }) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-4 self-start sm:self-auto">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   <span className="text-sm text-gray-700">Available</span>
@@ -857,12 +882,12 @@ export default function HomeContent({ venueId }) {
               </div>
             </div>
 
-            {/* Inline Filters - single row like screenshot */}
-            <div className="flex items-center gap-4 mb-4">
+            {/* Responsive Filters */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
               <select
                 value={selectedCourt}
                 onChange={(e) => handleFilterChange("court", e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full"
               >
                 <option value="all">All Courts</option>
                 {getUniqueCourtNames().map((court) => (
@@ -875,7 +900,7 @@ export default function HomeContent({ venueId }) {
               <select
                 value={filterStatus}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full"
               >
                 <option value="all">All</option>
                 <option value="available">Available</option>
@@ -885,7 +910,7 @@ export default function HomeContent({ venueId }) {
               <select
                 value={sortBy}
                 onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-full"
               >
                 <option value="time">Time</option>
                 <option value="price">Price</option>
@@ -895,34 +920,34 @@ export default function HomeContent({ venueId }) {
 
             {availableSlots.length > 0 ? (
               <div>
-                {/* Clean slots grid matching screenshot */}
-                <div className="grid grid-cols-8 gap-3 mb-4">
+                {/* Responsive slots grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 sm:gap-3 mb-4">
                   {getPaginatedSlots()
                     .slice(0, 16)
                     .map((slot, index) => (
                       <div
                         key={`${slot.courtName}-${slot.start_at}-${index}`}
-                        className={`relative rounded-lg p-3 border-2 text-center ${
+                        className={`relative rounded-lg p-2 sm:p-3 border-2 text-center ${
                           slot.booked
                             ? "bg-red-50 border-red-200"
                             : "bg-green-50 border-green-200"
                         }`}
                       >
                         <div
-                          className={`absolute top-2 right-2 w-2 h-2 rounded-full ${
+                          className={`absolute top-1 right-1 sm:top-2 sm:right-2 w-2 h-2 rounded-full ${
                             slot.booked ? "bg-red-500" : "bg-green-500"
                           }`}
                         ></div>
 
-                        <div className="text-xs font-semibold text-blue-700 mb-1">
+                        <div className="text-xs font-semibold text-blue-700 mb-1 truncate">
                           {slot.courtName}
                         </div>
 
-                        <div className="text-sm font-bold text-gray-900 mb-1">
+                        <div className="text-xs sm:text-sm font-bold text-gray-900 mb-1">
                           {formatTime12Hour(slot.start_at)}
                         </div>
 
-                        <div className="text-sm font-bold text-green-700">
+                        <div className="text-xs sm:text-sm font-bold text-green-700">
                           {formatPrice(slot.price.slice(1))}
                         </div>
                       </div>
@@ -958,28 +983,34 @@ export default function HomeContent({ venueId }) {
                   </div>
                 )}
 
-                {/* Stats row matching screenshot */}
-                <div className="grid grid-cols-4 gap-4">
+                {/* Responsive Stats Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
+                    <div className="text-xl sm:text-2xl font-bold text-green-600">
                       {getAllSlots().filter((slot) => !slot.booked).length}
                     </div>
-                    <div className="text-sm text-gray-600">Available</div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Available
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600">
+                    <div className="text-xl sm:text-2xl font-bold text-red-600">
                       {getAllSlots().filter((slot) => slot.booked).length}
                     </div>
-                    <div className="text-sm text-gray-600">Booked</div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Booked
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600">
+                    <div className="text-xl sm:text-2xl font-bold text-blue-600">
                       {getAllSlots().length}
                     </div>
-                    <div className="text-sm text-gray-600">Total</div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Total
+                    </div>
                   </div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-purple-600">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600">
                       {Math.round(
                         (getAllSlots().filter((slot) => !slot.booked).length /
                           getAllSlots().length) *
@@ -987,7 +1018,9 @@ export default function HomeContent({ venueId }) {
                       )}
                       %
                     </div>
-                    <div className="text-sm text-gray-600">Available</div>
+                    <div className="text-xs sm:text-sm text-gray-600">
+                      Available
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1001,9 +1034,9 @@ export default function HomeContent({ venueId }) {
             )}
           </div>
 
-          {/* Action buttons matching screenshot */}
+          {/* Responsive Action buttons */}
           {availableSlots.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={copyToClipboard}
                 className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium ${
